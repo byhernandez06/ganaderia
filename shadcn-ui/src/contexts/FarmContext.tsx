@@ -1,253 +1,257 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { Animal, Dashboard, Farm, HealthRecord, ProductionRecord } from "@/types";
-import { mockAnimals, mockDashboard, mockFarm } from "@/lib/mock-data";
-import { v4 as uuidv4 } from "uuid";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Animal, HealthRecord, ProductionRecord } from '@/types';
+import { toast } from 'sonner';
+import * as firebaseService from '@/services/firebase-service';
 
+// Define the context type
 interface FarmContextType {
-  farm: Farm;
+  // Data
   animals: Animal[];
-  dashboard: Dashboard;
+  healthRecords: HealthRecord[];
+  productionRecords: ProductionRecord[];
+  
+  // Loading states
   isLoading: boolean;
+  
   // Animal operations
-  addAnimal: (animal: Omit<Animal, "id" | "health" | "production">) => void;
-  updateAnimal: (animal: Animal) => void;
-  deleteAnimal: (animalId: string) => void;
-  getAnimal: (animalId: string) => Animal | undefined;
-  // Health records
-  addHealthRecord: (record: Omit<HealthRecord, "id">) => void;
-  updateHealthRecord: (record: HealthRecord) => void;
-  deleteHealthRecord: (recordId: string) => void;
-  // Production records
-  addProductionRecord: (record: Omit<ProductionRecord, "id">) => void;
-  updateProductionRecord: (record: ProductionRecord) => void;
-  deleteProductionRecord: (recordId: string) => void;
+  addAnimal: (animal: Omit<Animal, 'id'>) => Promise<void>;
+  updateAnimal: (id: string, animal: Partial<Omit<Animal, 'id'>>) => Promise<void>;
+  deleteAnimal: (id: string) => Promise<void>;
+  
+  // Health record operations
+  addHealthRecord: (record: Omit<HealthRecord, 'id'>) => Promise<void>;
+  updateHealthRecord: (id: string, record: Partial<Omit<HealthRecord, 'id'>>) => Promise<void>;
+  deleteHealthRecord: (id: string) => Promise<void>;
+  
+  // Production record operations
+  addProductionRecord: (record: Omit<ProductionRecord, 'id'>) => Promise<void>;
+  updateProductionRecord: (id: string, record: Partial<Omit<ProductionRecord, 'id'>>) => Promise<void>;
+  deleteProductionRecord: (id: string) => Promise<void>;
+  
+  // Dashboard stats
+  dashboardStats: {
+    totalAnimals: number;
+    animalsByType: Record<string, number>;
+    healthByType: Record<string, number>;
+    totalMilkProduction: number;
+    totalMeatProduction: number;
+    recentHealthRecords: HealthRecord[];
+  } | null;
+  refreshDashboardStats: () => Promise<void>;
 }
 
+// Create the context
 const FarmContext = createContext<FarmContextType | undefined>(undefined);
 
-export const useFarmContext = () => {
-  const context = useContext(FarmContext);
-  if (!context) {
-    throw new Error("useFarmContext must be used within a FarmProvider");
-  }
-  return context;
-};
-
+// Provider component
 export const FarmProvider = ({ children }: { children: ReactNode }) => {
-  const [farm, setFarm] = useState<Farm>(mockFarm);
-  const [animals, setAnimals] = useState<Animal[]>(mockAnimals);
-  const [dashboard, setDashboard] = useState<Dashboard>(mockDashboard);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [animals, setAnimals] = useState<Animal[]>([]);
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
+  const [productionRecords, setProductionRecords] = useState<ProductionRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<FarmContextType['dashboardStats']>(null);
 
-  // Animal operations
-  const addAnimal = (animalData: Omit<Animal, "id" | "health" | "production">) => {
-    const newAnimal: Animal = {
-      ...animalData,
-      id: uuidv4(),
-      health: [],
-      production: []
+  // Load initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load animals
+        const animalsData = await firebaseService.getAnimals();
+        setAnimals(animalsData);
+        
+        // Load health records
+        const healthData = await firebaseService.getHealthRecords();
+        setHealthRecords(healthData);
+        
+        // Load production records
+        const productionData = await firebaseService.getProductionRecords();
+        setProductionRecords(productionData);
+        
+        // Load dashboard stats
+        await refreshDashboardStats();
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        toast.error('Failed to load farm data');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setAnimals(prev => [...prev, newAnimal]);
-    updateDashboard([...animals, newAnimal]);
+    loadInitialData();
+  }, []);
+
+  // Dashboard stats
+  const refreshDashboardStats = async () => {
+    try {
+      const stats = await firebaseService.getDashboardStats();
+      setDashboardStats(stats);
+    } catch (error) {
+      console.error('Error refreshing dashboard stats:', error);
+      toast.error('Failed to load dashboard statistics');
+    }
   };
 
-  const updateAnimal = (updatedAnimal: Animal) => {
-    setAnimals(prev => prev.map(animal => 
-      animal.id === updatedAnimal.id ? updatedAnimal : animal
-    ));
-    updateDashboard([...animals.filter(a => a.id !== updatedAnimal.id), updatedAnimal]);
+  // Animal operations
+  const addAnimal = async (animal: Omit<Animal, 'id'>) => {
+    try {
+      const id = await firebaseService.addAnimal(animal);
+      const newAnimal = { id, ...animal };
+      setAnimals(prev => [...prev, newAnimal]);
+      await refreshDashboardStats();
+      toast.success('Animal added successfully');
+    } catch (error) {
+      console.error('Error adding animal:', error);
+      toast.error('Failed to add animal');
+      throw error;
+    }
   };
 
-  const deleteAnimal = (animalId: string) => {
-    setAnimals(prev => prev.filter(animal => animal.id !== animalId));
-    updateDashboard(animals.filter(a => a.id !== animalId));
+  const updateAnimal = async (id: string, animal: Partial<Omit<Animal, 'id'>>) => {
+    try {
+      await firebaseService.updateAnimal(id, animal);
+      setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...animal } : a));
+      await refreshDashboardStats();
+      toast.success('Animal updated successfully');
+    } catch (error) {
+      console.error('Error updating animal:', error);
+      toast.error('Failed to update animal');
+      throw error;
+    }
   };
 
-  const getAnimal = (animalId: string) => {
-    return animals.find(animal => animal.id === animalId);
+  const deleteAnimal = async (id: string) => {
+    try {
+      await firebaseService.deleteAnimal(id);
+      setAnimals(prev => prev.filter(a => a.id !== id));
+      
+      // Also remove related records
+      setHealthRecords(prev => prev.filter(r => r.animalId !== id));
+      setProductionRecords(prev => prev.filter(r => r.animalId !== id));
+      
+      await refreshDashboardStats();
+      toast.success('Animal deleted successfully');
+    } catch (error) {
+      console.error('Error deleting animal:', error);
+      toast.error('Failed to delete animal');
+      throw error;
+    }
   };
 
   // Health record operations
-  const addHealthRecord = (recordData: Omit<HealthRecord, "id">) => {
-    const record: HealthRecord = { ...recordData, id: uuidv4() };
-    const animalToUpdate = animals.find(animal => animal.id === recordData.animalId);
-
-    if (animalToUpdate) {
-      const updatedAnimal: Animal = {
-        ...animalToUpdate,
-        health: [...animalToUpdate.health, record]
-      };
-      updateAnimal(updatedAnimal);
+  const addHealthRecord = async (record: Omit<HealthRecord, 'id'>) => {
+    try {
+      const id = await firebaseService.addHealthRecord(record);
+      const newRecord = { id, ...record };
+      setHealthRecords(prev => [...prev, newRecord]);
+      await refreshDashboardStats();
+      toast.success('Health record added successfully');
+    } catch (error) {
+      console.error('Error adding health record:', error);
+      toast.error('Failed to add health record');
+      throw error;
     }
   };
 
-  const updateHealthRecord = (updatedRecord: HealthRecord) => {
-    const animalToUpdate = animals.find(animal => animal.id === updatedRecord.animalId);
-
-    if (animalToUpdate) {
-      const updatedAnimal: Animal = {
-        ...animalToUpdate,
-        health: animalToUpdate.health.map(record => 
-          record.id === updatedRecord.id ? updatedRecord : record
-        )
-      };
-      updateAnimal(updatedAnimal);
+  const updateHealthRecord = async (id: string, record: Partial<Omit<HealthRecord, 'id'>>) => {
+    try {
+      await firebaseService.updateHealthRecord(id, record);
+      setHealthRecords(prev => prev.map(r => r.id === id ? { ...r, ...record } : r));
+      await refreshDashboardStats();
+      toast.success('Health record updated successfully');
+    } catch (error) {
+      console.error('Error updating health record:', error);
+      toast.error('Failed to update health record');
+      throw error;
     }
   };
 
-  const deleteHealthRecord = (recordId: string) => {
-    const animalWithRecord = animals.find(animal => 
-      animal.health.some(record => record.id === recordId)
-    );
-
-    if (animalWithRecord) {
-      const updatedAnimal: Animal = {
-        ...animalWithRecord,
-        health: animalWithRecord.health.filter(record => record.id !== recordId)
-      };
-      updateAnimal(updatedAnimal);
+  const deleteHealthRecord = async (id: string) => {
+    try {
+      await firebaseService.deleteHealthRecord(id);
+      setHealthRecords(prev => prev.filter(r => r.id !== id));
+      await refreshDashboardStats();
+      toast.success('Health record deleted successfully');
+    } catch (error) {
+      console.error('Error deleting health record:', error);
+      toast.error('Failed to delete health record');
+      throw error;
     }
   };
 
   // Production record operations
-  const addProductionRecord = (recordData: Omit<ProductionRecord, "id">) => {
-    const record: ProductionRecord = { ...recordData, id: uuidv4() };
-    const animalToUpdate = animals.find(animal => animal.id === recordData.animalId);
-
-    if (animalToUpdate) {
-      const updatedAnimal: Animal = {
-        ...animalToUpdate,
-        production: [...animalToUpdate.production, record]
-      };
-      updateAnimal(updatedAnimal);
+  const addProductionRecord = async (record: Omit<ProductionRecord, 'id'>) => {
+    try {
+      const id = await firebaseService.addProductionRecord(record);
+      const newRecord = { id, ...record };
+      setProductionRecords(prev => [...prev, newRecord]);
+      await refreshDashboardStats();
+      toast.success('Production record added successfully');
+    } catch (error) {
+      console.error('Error adding production record:', error);
+      toast.error('Failed to add production record');
+      throw error;
     }
   };
 
-  const updateProductionRecord = (updatedRecord: ProductionRecord) => {
-    const animalToUpdate = animals.find(animal => animal.id === updatedRecord.animalId);
-
-    if (animalToUpdate) {
-      const updatedAnimal: Animal = {
-        ...animalToUpdate,
-        production: animalToUpdate.production.map(record => 
-          record.id === updatedRecord.id ? updatedRecord : record
-        )
-      };
-      updateAnimal(updatedAnimal);
+  const updateProductionRecord = async (id: string, record: Partial<Omit<ProductionRecord, 'id'>>) => {
+    try {
+      await firebaseService.updateProductionRecord(id, record);
+      setProductionRecords(prev => prev.map(r => r.id === id ? { ...r, ...record } : r));
+      await refreshDashboardStats();
+      toast.success('Production record updated successfully');
+    } catch (error) {
+      console.error('Error updating production record:', error);
+      toast.error('Failed to update production record');
+      throw error;
     }
   };
 
-  const deleteProductionRecord = (recordId: string) => {
-    const animalWithRecord = animals.find(animal => 
-      animal.production.some(record => record.id === recordId)
-    );
-
-    if (animalWithRecord) {
-      const updatedAnimal: Animal = {
-        ...animalWithRecord,
-        production: animalWithRecord.production.filter(record => record.id !== recordId)
-      };
-      updateAnimal(updatedAnimal);
+  const deleteProductionRecord = async (id: string) => {
+    try {
+      await firebaseService.deleteProductionRecord(id);
+      setProductionRecords(prev => prev.filter(r => r.id !== id));
+      await refreshDashboardStats();
+      toast.success('Production record deleted successfully');
+    } catch (error) {
+      console.error('Error deleting production record:', error);
+      toast.error('Failed to delete production record');
+      throw error;
     }
-  };
-
-  // Update dashboard data
-  const updateDashboard = (currentAnimals: Animal[]) => {
-    // This is a simplified implementation - in a real app, we would fetch from the backend
-    const byType = {
-      dairy: currentAnimals.filter(a => a.type === "dairy_cattle").length,
-      beef: currentAnimals.filter(a => a.type === "beef_cattle").length,
-    };
-
-    const byStatus = {
-      healthy: currentAnimals.filter(a => a.status === "healthy").length,
-      sick: currentAnimals.filter(a => a.status === "sick").length,
-      pregnant: currentAnimals.filter(a => a.status === "pregnant").length,
-      lactating: currentAnimals.filter(a => a.status === "lactating").length,
-      dry: currentAnimals.filter(a => a.status === "dry").length,
-    };
-
-    // Update farm animal counts
-    setFarm(prev => ({
-      ...prev,
-      animalCount: {
-        dairy: byType.dairy,
-        beef: byType.beef,
-        total: currentAnimals.length
-      }
-    }));
-
-    // Get most recent health records
-    const recentHealth = currentAnimals
-      .flatMap(a => a.health)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-
-    // Simple calculation for dashboard metrics
-    const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-
-    const milkRecords = currentAnimals
-      .flatMap(a => a.production)
-      .filter(p => p.type === "milk");
-    
-    const meatRecords = currentAnimals
-      .flatMap(a => a.production)
-      .filter(p => p.type === "meat");
-
-    setDashboard({
-      totalAnimals: currentAnimals.length,
-      byType,
-      byStatus,
-      production: {
-        milk: {
-          today: milkRecords
-            .filter(r => new Date(r.date).toDateString() === today.toDateString())
-            .reduce((sum, r) => sum + r.quantity, 0),
-          thisWeek: milkRecords
-            .filter(r => new Date(r.date) >= startOfWeek)
-            .reduce((sum, r) => sum + r.quantity, 0),
-          thisMonth: milkRecords
-            .filter(r => new Date(r.date) >= startOfMonth)
-            .reduce((sum, r) => sum + r.quantity, 0),
-        },
-        meat: {
-          thisMonth: meatRecords
-            .filter(r => new Date(r.date) >= startOfMonth)
-            .reduce((sum, r) => sum + r.quantity, 0),
-          thisYear: meatRecords
-            .filter(r => new Date(r.date) >= startOfYear)
-            .reduce((sum, r) => sum + r.quantity, 0),
-        }
-      },
-      recentHealth,
-    });
   };
 
   return (
     <FarmContext.Provider
       value={{
-        farm,
         animals,
-        dashboard,
+        healthRecords,
+        productionRecords,
         isLoading,
         addAnimal,
         updateAnimal,
         deleteAnimal,
-        getAnimal,
         addHealthRecord,
         updateHealthRecord,
         deleteHealthRecord,
         addProductionRecord,
         updateProductionRecord,
         deleteProductionRecord,
+        dashboardStats,
+        refreshDashboardStats,
       }}
     >
       {children}
     </FarmContext.Provider>
   );
+};
+
+// Custom hook for using the context
+export const useFarm = () => {
+  const context = useContext(FarmContext);
+  if (context === undefined) {
+    throw new Error('useFarm must be used within a FarmProvider');
+  }
+  return context;
 };
