@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useFarmContext } from "@/contexts/FarmContext";
+import { useFarm } from "@/contexts/FarmContext";
 import {
   Card,
   CardContent,
@@ -47,7 +47,7 @@ import { Animal, HealthRecord } from "@/types";
 import { PlusCircle, MoreHorizontal, Filter, Search, Calendar } from "lucide-react";
 
 export default function HealthRecords() {
-  const { animals, addHealthRecord, deleteHealthRecord } = useFarmContext();
+  const { animals, addHealthRecord, deleteHealthRecord } = useFarm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);

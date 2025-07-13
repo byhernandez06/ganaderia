@@ -1,5 +1,5 @@
 import React from "react";
-import { useFarmContext } from "@/contexts/FarmContext";
+import { useFarm } from "@/contexts/FarmContext";
 import {
   Card,
   CardContent,
@@ -23,7 +23,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export default function Settings() {
-  const { farm } = useFarmContext();
+  const { farm } = useFarm();
   const [farmSettings, setFarmSettings] = useState({
     name: farm.name,
     location: farm.location,

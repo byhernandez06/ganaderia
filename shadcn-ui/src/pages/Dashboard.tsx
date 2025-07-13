@@ -1,5 +1,5 @@
 import React from "react";
-import { useFarmContext } from "@/contexts/FarmContext";
+import { useFarm } from "@/contexts/FarmContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -7,7 +7,22 @@ import { Activity, Beef, Droplet, BarChart2 } from "lucide-react";
 import { AnimalType, AnimalStatus } from "@/types";
 
 export default function Dashboard() {
-  const { dashboard, farm } = useFarmContext();
+  const { dashboardStats } = useFarm();
+  
+  // If dashboardStats is null, use default values
+  const dashboard = dashboardStats || {
+    totalAnimals: 0,
+    animalsByType: {},
+    byType: { dairy: 0, beef: 0 },
+    byStatus: { healthy: 0, sick: 0, pregnant: 0 },
+    recentHealth: [],
+    production: {
+      milk: { today: 0, thisWeek: 0, thisMonth: 0 },
+      meat: { thisMonth: 0 }
+    }
+  };
+
+  const farm = { name: "Livestock Farm" };
 
   const statusData = Object.entries(dashboard.byStatus).map(([status, count]) => ({
     status,

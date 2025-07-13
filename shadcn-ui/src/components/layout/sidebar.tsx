@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useFarmContext } from "@/contexts/FarmContext";
+import { useFarm } from "@/contexts/FarmContext";
 
 interface SidebarProps {
   className?: string;
@@ -21,7 +21,7 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const { farm } = useFarmContext();
+  const { dashboardStats } = useFarm();
   const location = useLocation();
   
   const links = [
@@ -45,7 +45,7 @@ export function Sidebar({ className }: SidebarProps) {
         {!collapsed && (
           <Link to="/" className="flex items-center gap-2">
             <Tractor className="h-6 w-6" />
-            <span className="text-lg font-medium">{farm.name}</span>
+            <span className="text-lg font-medium">Livestock Manager</span>
           </Link>
         )}
         {collapsed && (
@@ -87,10 +87,10 @@ export function Sidebar({ className }: SidebarProps) {
           {!collapsed && (
             <>
               <p className="text-xs font-medium leading-none text-muted-foreground">
-                {farm.location}
+                Farm Location
               </p>
               <p className="text-xs leading-none text-muted-foreground">
-                {farm.size} {farm.units}
+                Livestock Management System
               </p>
             </>
           )}

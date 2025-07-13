@@ -5,7 +5,7 @@ import {
 import { db } from '@/lib/firebase';
 import { 
   Animal, HealthRecord, ProductionRecord, 
-  AnimalType, HealthRecordType, ProductionRecordType 
+  AnimalType, ProductionType 
 } from '@/types';
 
 // Collections references
@@ -187,9 +187,9 @@ export const getDashboardStats = async () => {
   
   productionSnapshot.forEach(doc => {
     const record = doc.data() as ProductionRecord;
-    if (record.type === ProductionRecordType.MILK) {
+    if (record.type === ProductionType.MILK) {
       totalMilkProduction += record.quantity;
-    } else if (record.type === ProductionRecordType.MEAT) {
+    } else if (record.type === ProductionType.MEAT) {
       totalMeatProduction += record.quantity;
     }
   });

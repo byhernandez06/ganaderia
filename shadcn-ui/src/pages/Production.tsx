@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useFarmContext } from "@/contexts/FarmContext";
+import { useFarm } from "@/contexts/FarmContext";
 import {
   Card,
   CardContent,
@@ -49,7 +49,7 @@ import { Animal, ProductionRecord, ProductionType, AnimalType } from "@/types";
 import { PlusCircle, MoreHorizontal, Filter, Search, Calendar, Droplet, BarChart2 } from "lucide-react";
 
 export default function Production() {
-  const { animals, addProductionRecord, deleteProductionRecord } = useFarmContext();
+  const { animals, addProductionRecord, deleteProductionRecord } = useFarm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<ProductionType | null>(null);
   const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);

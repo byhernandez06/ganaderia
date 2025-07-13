@@ -14,7 +14,7 @@ import { Bell, Search, Settings, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Header() {
+export function Header() {
   const { userData, signOut } = useAuth();
   
   const displayName = userData?.displayName || 'User';

@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 
-export function Layout() {
+export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />

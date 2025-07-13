@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useFarmContext } from "@/contexts/FarmContext";
+import { useFarm } from "@/contexts/FarmContext";
 import {
   Card,
   CardContent,
@@ -37,7 +37,7 @@ import { AnimalStatus, AnimalType, ProductionType } from "@/types";
 import { Download } from "lucide-react";
 
 export default function Reports() {
-  const { animals, dashboard } = useFarmContext();
+  const { animals, dashboard } = useFarm();
   const [timeRange, setTimeRange] = useState<"week" | "month" | "quarter" | "year">("month");
 
   // Data for pie charts
