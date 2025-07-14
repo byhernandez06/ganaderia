@@ -24,10 +24,10 @@ export default function Dashboard() {
 
   const farm = { name: "Livestock Farm" };
 
-  const statusData = Object.entries(dashboard.byStatus).map(([status, count]) => ({
+  const statusData = dashboard.byStatus ? Object.entries(dashboard.byStatus).map(([status, count]) => ({
     status,
     count
-  }));
+  })) : [];
 
   const animalTypeData = [
     { name: "Ganado Lechero", value: dashboard.byType.dairy },
