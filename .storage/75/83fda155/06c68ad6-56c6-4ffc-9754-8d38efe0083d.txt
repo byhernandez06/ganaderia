@@ -1,0 +1,165 @@
+$ cd /workspace/shadcn-ui && pnpm add firebase firebase-admin
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 68, reused 67, downloaded 0, added 0
+Progress: resolved 361, reused 358, downloaded 1, added 0
+Progress: resolved 428, reused 416, downloaded 9, added 0
+Progress: resolved 445, reused 416, downloaded 23, added 0
+Progress: resolved 539, reused 425, downloaded 40, added 0
+Progress: resolved 556, reused 426, downloaded 50, added 0
+Progress: resolved 618, reused 426, downloaded 103, added 0
+Packages: +171
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 684, reused 440, downloaded 171, added 132
+Progress: resolved 684, reused 440, downloaded 171, added 169
+Progress: resolved 684, reused 440, downloaded 171, added 170
+Progress: resolved 684, reused 440, downloaded 171, added 171
+Progress: resolved 684, reused 440, downloaded 171, added 171, done
+.../node_modules/@firebase/util postinstall$ node ./postinstall.js
+.../node_modules/@firebase/util postinstall: Done
+.../node_modules/protobufjs postinstall$ node scripts/postinstall
+.../node_modules/protobufjs postinstall: Done
+
+dependencies:
++ firebase 11.10.0
++ firebase-admin 13.4.0
+
+Done in 16.4s
+$ cd /workspace/shadcn-ui && pnpm i && pnpm run lint
+
+Lockfile is up to date, resolution step is skipped
+Packages: +611
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.../node_modules/@firebase/util postinstall$ node ./postinstall.js
+.../node_modules/@firebase/util postinstall: Done
+.../node_modules/@swc/core postinstall$ node postinstall.js
+.../node_modules/@swc/core postinstall: Done
+.../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+.../esbuild@0.25.4/node_modules/esbuild postinstall$ node install.js
+.../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+.../esbuild@0.25.4/node_modules/esbuild postinstall: Done
+.../node_modules/protobufjs postinstall$ node scripts/postinstall
+.../node_modules/protobufjs postinstall: Done
+
+Done in 2.8s
+
+> livestock-management@ lint /workspace/shadcn-ui
+> eslint --quiet ./src
+
+
+/workspace/shadcn-ui/src/contexts/AuthContext.tsx
+  13:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 3 problems (3 errors, 0 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.
+$ cd /workspace/shadcn-ui && pnpm run lint
+
+
+> livestock-management@ lint /workspace/shadcn-ui
+> eslint --quiet ./src
+
+$ cd /workspace/shadcn-ui && pnpm i firebase
+
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Progress: resolved 224, reused 224, downloaded 0, added 0
+Already up to date
+Progress: resolved 684, reused 611, downloaded 0, added 0
+Progress: resolved 684, reused 611, downloaded 0, added 0, done
+
+Done in 3.8s
+$ cd /workspace/shadcn-ui && pnpm run build
+
+
+> livestock-management@ build /workspace/shadcn-ui
+> vite build
+
+vite v5.4.19 building for production...
+transforming...
+✓ 2570 modules transformed.
+x Build failed in 5.78s
+error during build:
+src/components/layout/sidebar.tsx (16:9): "useFarmContext" is not exported by "src/contexts/FarmContext.tsx", imported by "src/components/layout/sidebar.tsx".
+file: /workspace/shadcn-ui/src/components/layout/sidebar.tsx:16:9
+
+14: import { cn } from "@/lib/utils";
+15: import { Button } from "@/components/ui/button";
+16: import { useFarmContext } from "@/contexts/FarmContext";
+             ^
+17: 
+18: interface SidebarProps {
+
+    at getRollupError (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/parseAst.js:397:41)
+    at error (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/parseAst.js:393:42)
+    at Module.error (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:16759:16)
+    at Module.traceVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:17208:29)
+    at ModuleScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:14864:39)
+    at FunctionScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5582:38)
+    at FunctionBodyScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5582:38)
+    at Identifier.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5356:40)
+    at CallExpression.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:2783:23)
+    at CallExpression.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:11929:15)
+ ELIFECYCLE  Command failed with exit code 1.
+$ cd /workspace/shadcn-ui && pnpm run build
+
+
+> livestock-management@ build /workspace/shadcn-ui
+> vite build
+
+vite v5.4.19 building for production...
+transforming...
+✓ 2570 modules transformed.
+x Build failed in 6.29s
+error during build:
+src/components/layout/layout.tsx (3:9): "Header" is not exported by "src/components/layout/header.tsx", imported by "src/components/layout/layout.tsx".
+file: /workspace/shadcn-ui/src/components/layout/layout.tsx:3:9
+
+1: import React from "react";
+2: import { Outlet } from "react-router-dom";
+3: import { Header } from "./header";
+            ^
+4: import { Sidebar } from "./sidebar";
+
+    at getRollupError (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/parseAst.js:397:41)
+    at error (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/parseAst.js:393:42)
+    at Module.error (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:16759:16)
+    at Module.traceVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:17208:29)
+    at ModuleScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:14864:39)
+    at FunctionScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5582:38)
+    at FunctionBodyScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5582:38)
+    at Identifier.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5356:40)
+    at CallExpression.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:2779:28)
+    at CallExpression.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:11929:15)
+ ELIFECYCLE  Command failed with exit code 1.
+$ cd /workspace/shadcn-ui && pnpm run build
+
+
+> livestock-management@ build /workspace/shadcn-ui
+> vite build
+
+vite v5.4.19 building for production...
+transforming...
+✓ 2570 modules transformed.
+x Build failed in 6.00s
+error during build:
+src/pages/Dashboard.tsx (2:9): "useFarmContext" is not exported by "src/contexts/FarmContext.tsx", imported by "src/pages/Dashboard.tsx".
+file: /workspace/shadcn-ui/src/pages/Dashboard.tsx:2:9
+
+1: import React from "react";
+2: import { useFarmContext } from "@/contexts/FarmContext";
+            ^
+3: import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+4: import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+    at getRollupError (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/parseAst.js:397:41)
+    at error (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/parseAst.js:393:42)
+    at Module.error (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:16759:16)
+    at Module.traceVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:17208:29)
+    at ModuleScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:14864:39)
+    at FunctionScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5582:38)
+    at FunctionBodyScope.findVariable (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5582:38)
+    at Identifier.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:5356:40)
+    at CallExpression.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:2783:23)
+    at CallExpression.bind (file:///workspace/shadcn-ui/node_modules/.pnpm/rollup@4.40.2/node_modules/rollup/dist/es/shared/node-entry.js:11929:15)
+ ELIFECYCLE  Command failed with exit code 1.

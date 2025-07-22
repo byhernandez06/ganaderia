@@ -1,0 +1,5 @@
+$ cd /workspace/shadcn-ui && pnpm run lint
+
+> livestock-management@ lint /workspace/shadcn-ui
+> eslint --quiet ./src
+
