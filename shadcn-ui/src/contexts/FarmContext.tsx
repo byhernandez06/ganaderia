@@ -59,6 +59,7 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
         
         // Load animals
         const animalsData = await firebaseService.getAnimals();
+        console.log("AnimalsData: ", animalsData)
         setAnimals(animalsData);
         
         // Load health records

@@ -42,8 +42,8 @@ export default function Reports() {
 
   // Data for pie charts
   const animalTypeData = [
-    { name: "Ganado Lechero", value: dashboard.byType.dairy },
-    { name: "Ganado Cárnico", value: dashboard.byType.beef }
+    { name: "Ganado Lechero", value: dashboard?.byType?.dairy },
+    { name: "Ganado Cárnico", value: dashboard?.byType?.beef }
   ];
 
   const animalStatusData = Object.entries(dashboard.byStatus).map(([status, count]) => ({
@@ -291,15 +291,15 @@ export default function Reports() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-blue-800 text-lg font-semibold">{dashboard.totalAnimals}</p>
+                  <p className="text-blue-800 text-lg font-semibold">{dashboard?.totalAnimals}</p>
                   <p className="text-blue-600 text-sm">Total de Animales</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-green-800 text-lg font-semibold">{dashboard.production.milk.thisMonth.toFixed(0)} L</p>
+                  <p className="text-green-800 text-lg font-semibold">{dashboard?.production?.milk?.thisMonth.toFixed(0)} L</p>
                   <p className="text-green-600 text-sm">Leche (Este Mes)</p>
                 </div>
                 <div className="bg-amber-50 rounded-lg p-4">
-                  <p className="text-amber-800 text-lg font-semibold">{dashboard.production.meat.thisMonth.toFixed(0)} kg</p>
+                  <p className="text-amber-800 text-lg font-semibold">{dashboard?.production?.meat?.thisMonth.toFixed(0)} kg</p>
                   <p className="text-amber-600 text-sm">Ganancia Peso (Este Mes)</p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">

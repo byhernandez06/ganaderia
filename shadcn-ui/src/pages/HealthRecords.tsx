@@ -66,7 +66,7 @@ export default function HealthRecords() {
 
   // Get all health records from all animals
   const allHealthRecords = animals.flatMap(animal => 
-    animal.health.map(record => ({
+    animal?.health?.map(record => ({
       ...record,
       animalTag: animal.tag,
       animalName: animal.name || "",
@@ -77,9 +77,9 @@ export default function HealthRecords() {
   // Filter health records based on search term and selected filters
   const filteredHealthRecords = allHealthRecords.filter((record) => {
     const matchesSearch =
-      record.animalTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (record.medicine?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+      record?.animalTag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record?.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (record?.medicine?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
     const matchesType = !selectedType || record.type === selectedType;
     const matchesAnimal = !selectedAnimalId || record.animalId === selectedAnimalId;
@@ -384,23 +384,23 @@ export default function HealthRecords() {
                 </TableHeader>
                 <TableBody>
                   {filteredHealthRecords.map((record) => (
-                    <TableRow key={record.id}>
+                    <TableRow key={record?.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(record.date).toLocaleDateString()}
+                          {new Date(record?.date).toLocaleDateString()}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{record.animalTag} {record.animalName && `(${record.animalName})`}</TableCell>
+                      <TableCell className="font-medium">{record?.animalTag} {record?.animalName && `(${record?.animalName})`}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={getTypeColor(record.type)}>
-                          {getTypeLabel(record.type)}
+                        <Badge variant="outline" className={getTypeColor(record?.type)}>
+                          {getTypeLabel(record?.type)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{record.description}</TableCell>
-                      <TableCell>{record.medicine || "-"}</TableCell>
-                      <TableCell>{record.veterinarian || "-"}</TableCell>
-                      <TableCell>{record.cost ? `$${record.cost}` : "-"}</TableCell>
+                      <TableCell>{record?.description}</TableCell>
+                      <TableCell>{record?.medicine || "-"}</TableCell>
+                      <TableCell>{record?.veterinarian || "-"}</TableCell>
+                      <TableCell>{record?.cost ? `$${record?.cost}` : "-"}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -414,7 +414,7 @@ export default function HealthRecords() {
                             <DropdownMenuItem>Editar</DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => deleteHealthRecord(record.id)}
+                              onClick={() => deleteHealthRecord(record?.id)}
                             >
                               Eliminar
                             </DropdownMenuItem>

@@ -30,14 +30,14 @@ export default function Dashboard() {
   })) : [];
 
   const animalTypeData = [
-    { name: "Ganado Lechero", value: dashboard.byType.dairy },
-    { name: "Ganado Cárnico", value: dashboard.byType.beef }
+    { name: "Ganado Lechero", value: dashboard?.byType?.dairy },
+    { name: "Ganado Cárnico", value: dashboard?.byType?.beef }
   ];
 
   const productionData = [
-    { name: "Día", leche: dashboard.production.milk.today.toFixed(1) },
-    { name: "Semana", leche: dashboard.production.milk.thisWeek.toFixed(1) },
-    { name: "Mes", leche: dashboard.production.milk.thisMonth.toFixed(1) }
+    { name: "Día", leche: dashboard.production?.milk?.today.toFixed(1) },
+    { name: "Semana", leche: dashboard.production?.milk?.thisWeek.toFixed(1) },
+    { name: "Mes", leche: dashboard.production?.milk?.thisMonth.toFixed(1) }
   ];
 
   return (
@@ -58,7 +58,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{dashboard.totalAnimals}</div>
             <p className="text-xs text-muted-foreground">
-              {dashboard.byType.dairy} lechero, {dashboard.byType.beef} cárnico
+              {dashboard.byType?.dairy} lechero, {dashboard.byType?.beef} cárnico
             </p>
           </CardContent>
         </Card>
@@ -68,9 +68,9 @@ export default function Dashboard() {
             <Droplet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboard.production.milk.today.toFixed(1)} L</div>
+            <div className="text-2xl font-bold">{dashboard?.production?.milk?.today.toFixed(1)} L</div>
             <p className="text-xs text-muted-foreground">
-              {dashboard.production.milk.thisMonth.toFixed(1)} L este mes
+              {dashboard?.production?.milk?.thisMonth.toFixed(1)} L este mes
             </p>
           </CardContent>
         </Card>
@@ -80,7 +80,7 @@ export default function Dashboard() {
             <BarChart2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboard.production.meat.thisMonth.toFixed(1)} kg</div>
+            <div className="text-2xl font-bold">{dashboard?.production?.meat?.thisMonth.toFixed(1)} kg</div>
             <p className="text-xs text-muted-foreground">
               Este mes
             </p>
@@ -92,7 +92,7 @@ export default function Dashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboard.recentHealth.length}</div>
+            <div className="text-2xl font-bold">{dashboard?.recentHealth?.length}</div>
             <p className="text-xs text-muted-foreground">
               Eventos recientes
             </p>
@@ -174,7 +174,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {dashboard.recentHealth.map(record => (
+                {dashboard?.recentHealth?.map(record => (
                   <div key={record.id} className="flex items-start gap-4 rounded-lg border p-3">
                     <div className={`mt-0.5 rounded-full p-1 ${
                       record.type === 'vaccination' ? 'bg-blue-100' :
