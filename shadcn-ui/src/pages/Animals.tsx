@@ -47,22 +47,437 @@ import { Label } from "@/components/ui/label";
 import { Animal, AnimalStatus, AnimalType } from "@/types";
 import { PlusCircle, MoreHorizontal, Filter, Search } from "lucide-react";
 
+// Componente de Registro de Animales (integrado)
+const AnimalRegistration = ({ onAnimalAdded, onCancel }) => {
+  const { addAnimal } = useFarm();
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    birthDate: '',
+    breed: '',
+    sex: '',
+    origin: 'Finca',
+    father: { name: '', code: '' },
+    mother: { name: '', code: '' },
+    maternalGrandfather: { name: '', code: '' },
+    maternalGrandmother: { name: '', code: '' },
+    paternalGrandfather: { name: '', code: '' },
+    paternalGrandmother: { name: '', code: '' }
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name.includes('.')) {
+      const [parent, field] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [field]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitMessage('');
+
+    try {
+      // Mapear los datos del formulario a la estructura esperada por useFarm
+      const newAnimalData = {
+        tag: formData.code,
+        name: formData.name,
+        type: formData.breed === "Jersey" || formData.breed === "Holstein" ? 
+              AnimalType.DAIRY_CATTLE : AnimalType.BEEF_CATTLE,
+        breed: formData.breed,
+        birthDate: formData.birthDate,
+        gender: formData.sex === "Macho" ? "male" : "female",
+        status: AnimalStatus.HEALTHY,
+        weight: 0, // Valor por defecto, puedes añadir campo en el formulario si es necesario
+        origin: formData.origin,
+        // Incluir información de padres si es necesario
+        parentInfo: {
+          father: formData.father,
+          mother: formData.mother,
+          maternalGrandfather: formData.maternalGrandfather,
+          maternalGrandmother: formData.maternalGrandmother,
+          paternalGrandfather: formData.paternalGrandfather,
+          paternalGrandmother: formData.paternalGrandmother
+        }
+      };
+
+      addAnimal(newAnimalData);
+      setSubmitMessage('¡Animal registrado exitosamente!');
+      
+      // Reset form
+      setFormData({
+        name: '',
+        code: '',
+        birthDate: '',
+        breed: '',
+        sex: '',
+        origin: 'Finca',
+        father: { name: '', code: '' },
+        mother: { name: '', code: '' },
+        maternalGrandfather: { name: '', code: '' },
+        maternalGrandmother: { name: '', code: '' },
+        paternalGrandfather: { name: '', code: '' },
+        paternalGrandmother: { name: '', code: '' }
+      });
+
+      if (onAnimalAdded) {
+        onAnimalAdded(newAnimalData);
+      }
+
+      setTimeout(() => {
+        setSubmitMessage('');
+        if (onAnimalAdded) {
+          onAnimalAdded();
+        }
+      }, 2000);
+    } catch (error) {
+      setSubmitMessage('Error al registrar el animal. Intenta nuevamente.');
+      console.error('Error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-h-[80vh] overflow-y-auto">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Registrar Nuevo Animal</h2>
+      
+      {submitMessage && (
+        <div className={`mb-4 p-4 rounded-md ${
+          submitMessage.includes('exitosamente') 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          {submitMessage}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Información Básica</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del Animal *
+              </label>
+              <Input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="Ej: Bella"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Código del Animal *
+              </label>
+              <Input
+                type="text"
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                required
+                placeholder="Ej: BEL001"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Nacimiento *
+              </label>
+              <Input
+                type="date"
+                name="birthDate"
+                value={formData.birthDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Raza *
+              </label>
+              <Select
+                name="breed"
+                value={formData.breed}
+                onValueChange={(value) => setFormData(prev => ({...prev, breed: value}))}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar raza" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Jersey">Jersey</SelectItem>
+                  <SelectItem value="Parda">Parda</SelectItem>
+                  <SelectItem value="Holstein">Holstein</SelectItem>
+                  <SelectItem value="Brahman">Brahman</SelectItem>
+                  <SelectItem value="Angus">Angus</SelectItem>
+                  <SelectItem value="Otra">Otra</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sexo *
+              </label>
+              <Select
+                name="sex"
+                value={formData.sex}
+                onValueChange={(value) => setFormData(prev => ({...prev, sex: value}))}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar sexo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Macho">Macho</SelectItem>
+                  <SelectItem value="Hembra">Hembra</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Procedencia
+              </label>
+              <Select
+                name="origin"
+                value={formData.origin}
+                onValueChange={(value) => setFormData(prev => ({...prev, origin: value}))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar procedencia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Finca">Finca</SelectItem>
+                  <SelectItem value="Compra">Compra</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Parents Information */}
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Información de Padres</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-800 mb-3">Padre</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre del Padre
+                  </label>
+                  <Input
+                    type="text"
+                    name="father.name"
+                    value={formData.father.name}
+                    onChange={handleChange}
+                    placeholder="Ej: Toro Max"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código del Padre
+                  </label>
+                  <Input
+                    type="text"
+                    name="father.code"
+                    value={formData.father.code}
+                    onChange={handleChange}
+                    placeholder="Ej: MAX001"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-800 mb-3">Madre</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre de la Madre
+                  </label>
+                  <Input
+                    type="text"
+                    name="mother.name"
+                    value={formData.mother.name}
+                    onChange={handleChange}
+                    placeholder="Ej: Vaca Luna"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código de la Madre
+                  </label>
+                  <Input
+                    type="text"
+                    name="mother.code"
+                    value={formData.mother.code}
+                    onChange={handleChange}
+                    placeholder="Ej: LUN001"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Grandparents Information */}
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Información de Abuelos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-800 mb-3">Abuelos Maternos</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Abuelo Materno
+                  </label>
+                  <Input
+                    type="text"
+                    name="maternalGrandfather.name"
+                    value={formData.maternalGrandfather.name}
+                    onChange={handleChange}
+                    placeholder="Nombre"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código Abuelo Materno
+                  </label>
+                  <Input
+                    type="text"
+                    name="maternalGrandfather.code"
+                    value={formData.maternalGrandfather.code}
+                    onChange={handleChange}
+                    placeholder="Código"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Abuela Materna
+                  </label>
+                  <Input
+                    type="text"
+                    name="maternalGrandmother.name"
+                    value={formData.maternalGrandmother.name}
+                    onChange={handleChange}
+                    placeholder="Nombre"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código Abuela Materna
+                  </label>
+                  <Input
+                    type="text"
+                    name="maternalGrandmother.code"
+                    value={formData.maternalGrandmother.code}
+                    onChange={handleChange}
+                    placeholder="Código"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-800 mb-3">Abuelos Paternos</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Abuelo Paterno
+                  </label>
+                  <Input
+                    type="text"
+                    name="paternalGrandfather.name"
+                    value={formData.paternalGrandfather.name}
+                    onChange={handleChange}
+                    placeholder="Nombre"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código Abuelo Paterno
+                  </label>
+                  <Input
+                    type="text"
+                    name="paternalGrandfather.code"
+                    value={formData.paternalGrandfather.code}
+                    onChange={handleChange}
+                    placeholder="Código"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Abuela Paterna
+                  </label>
+                  <Input
+                    type="text"
+                    name="paternalGrandmother.name"
+                    value={formData.paternalGrandmother.name}
+                    onChange={handleChange}
+                    placeholder="Nombre"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código Abuela Paterna
+                  </label>
+                  <Input
+                    type="text"
+                    name="paternalGrandmother.code"
+                    value={formData.paternalGrandmother.code}
+                    onChange={handleChange}
+                    placeholder="Código"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Registrando...' : 'Registrar Animal'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 export default function Animals() {
   const { animals, addAnimal, updateAnimal, deleteAnimal } = useFarm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newAnimal, setNewAnimal] = useState<Partial<Animal>>({
-    tag: "",
-    name: "",
-    type: AnimalType.DAIRY_CATTLE,
-    breed: "",
-    birthDate: new Date().toISOString().split("T")[0],
-    gender: "female",
-    status: AnimalStatus.HEALTHY,
-    weight: 0
-  });
 
   // Filter animals based on search term and selected filters
   const filteredAnimals = animals.filter((animal) => {
@@ -76,38 +491,6 @@ export default function Animals() {
 
     return matchesSearch && matchesType && matchesStatus;
   });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewAnimal({
-      ...newAnimal,
-      [name]: value
-    });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setNewAnimal({
-      ...newAnimal,
-      [name]: value
-    });
-  };
-
-  const handleAddAnimal = () => {
-    if (newAnimal.tag && newAnimal.breed && newAnimal.type && newAnimal.status && newAnimal.weight) {
-      addAnimal(newAnimal as Omit<Animal, "id" | "health" | "production">);
-      setNewAnimal({
-        tag: "",
-        name: "",
-        type: AnimalType.DAIRY_CATTLE,
-        breed: "",
-        birthDate: new Date().toISOString().split("T")[0],
-        gender: "female",
-        status: AnimalStatus.HEALTHY,
-        weight: 0
-      });
-      setIsAddDialogOpen(false);
-    }
-  };
 
   const getStatusColor = (status: AnimalStatus) => {
     switch (status) {
@@ -142,134 +525,11 @@ export default function Animals() {
               Agregar Animal
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Agregar Nuevo Animal</DialogTitle>
-              <DialogDescription>
-                Completa los detalles del nuevo animal para añadirlo al registro.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tag">Etiqueta/Arete</Label>
-                  <Input
-                    id="tag"
-                    name="tag"
-                    placeholder="ABC123"
-                    value={newAnimal.tag}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre (Opcional)</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    placeholder="Nombre"
-                    value={newAnimal.name}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select
-                    onValueChange={(value) => handleSelectChange("type", value)}
-                    defaultValue={newAnimal.type}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value={AnimalType.DAIRY_CATTLE}>Ganado Lechero</SelectItem>
-                        <SelectItem value={AnimalType.BEEF_CATTLE}>Ganado Cárnico</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="breed">Raza</Label>
-                  <Input
-                    id="breed"
-                    name="breed"
-                    placeholder="Holstein, Angus, etc."
-                    value={newAnimal.breed}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
-                  <Input
-                    id="birthDate"
-                    name="birthDate"
-                    type="date"
-                    value={newAnimal.birthDate as string}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Género</Label>
-                  <Select
-                    onValueChange={(value) => handleSelectChange("gender", value)}
-                    defaultValue={newAnimal.gender as string}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar género" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="female">Hembra</SelectItem>
-                        <SelectItem value="male">Macho</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Estado</Label>
-                  <Select
-                    onValueChange={(value) => handleSelectChange("status", value)}
-                    defaultValue={newAnimal.status}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value={AnimalStatus.HEALTHY}>Saludable</SelectItem>
-                        <SelectItem value={AnimalStatus.SICK}>Enfermo</SelectItem>
-                        <SelectItem value={AnimalStatus.PREGNANT}>Preñada</SelectItem>
-                        <SelectItem value={AnimalStatus.LACTATING}>Lactando</SelectItem>
-                        <SelectItem value={AnimalStatus.DRY}>Seca</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Peso (kg)</Label>
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    placeholder="0"
-                    value={newAnimal.weight?.toString()}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleAddAnimal}>Guardar</Button>
-            </DialogFooter>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <AnimalRegistration 
+              onAnimalAdded={() => setIsAddDialogOpen(false)}
+              onCancel={() => setIsAddDialogOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>

@@ -29,6 +29,7 @@ export function Sidebar({ className }: SidebarProps) {
     { name: "Animales", icon: <Beef className="h-5 w-5" />, path: "/animals" },
     { name: "Registros de Salud", icon: <Activity className="h-5 w-5" />, path: "/health-records" },
     { name: "Producción", icon: <MilkOff className="h-5 w-5" />, path: "/production" },
+    { name: "Genealogía", icon: <Settings className="h-5 w-5" />, path: "/genealogy" },
     { name: "Reportes", icon: <BarChart className="h-5 w-5" />, path: "/reports" },
     { name: "Configuración", icon: <Settings className="h-5 w-5" />, path: "/settings" },
   ];

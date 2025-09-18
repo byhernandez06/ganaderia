@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export enum AnimalType {
   DAIRY_CATTLE = "dairy_cattle",
   BEEF_CATTLE = "beef_cattle"
@@ -16,6 +18,15 @@ export enum ProductionType {
   MEAT = "meat"
 }
 
+// types/index.ts
+export interface ParentRef {
+  id?: string;   // opcional, por si guardas IDs
+  code?: string; // tu "tag" o código visible
+  name?: string; // nombre visible
+}
+
+
+// === TU TIPO Animal, ampliado con parentInfo ===
 export interface Animal {
   id: string;
   tag: string;
@@ -26,16 +37,39 @@ export interface Animal {
   gender: "male" | "female";
   status: AnimalStatus;
   weight: number;
-  purchaseDate?: Date | string;
-  purchasePrice?: number;
-  notes?: string;
-  health: HealthRecord[];
-  production: ProductionRecord[];
+  // ...
   parentMaleId?: string;
   parentFemaleId?: string;
-  imageUrl?: string;
+
+  // ⬇️⬇️ NUEVO: lo que guardas desde el formulario
+  parentInfo?: {
+    father?: ParentRef;
+    mother?: ParentRef;
+    maternalGrandfather?: ParentRef;
+    maternalGrandmother?: ParentRef;
+    paternalGrandfather?: ParentRef;
+    paternalGrandmother?: ParentRef;
+  };
 }
 
+// === NUEVO: exporta Genealogy para todo el proyecto ===
+export interface Genealogy {
+  id: string;                  // id del doc (puede ser = animalId)
+  animalId: string;            // a quién pertenece
+  fatherId?: string;
+  motherId?: string;
+  paternalGrandfatherId?: string;
+  paternalGrandmotherId?: string;
+  maternalGrandfatherId?: string;
+  maternalGrandmotherId?: string;
+  updatedAt?: any;             // Timestamp | Date | string (evita importar tipos de Firestore aquí)
+  updatedBy?: string;
+}
+
+
+
+
+// En tu archivo types/index.ts
 export interface HealthRecord {
   id: string;
   animalId: string;
@@ -47,17 +81,22 @@ export interface HealthRecord {
   veterinarian?: string;
   cost?: number;
   notes?: string;
+  nextDoseDate?: Date | string; // Nuevo campo
+  repeatEveryDays?: number; // Nuevo campo
+  reminderAdvanceDays?: number; // Nuevo campo
+  reminderEnabled?: boolean; // Nuevo campo
 }
 
 export interface ProductionRecord {
   id: string;
   animalId: string;
-  date: Date | string;
+   timestamp: Timestamp | Date;// de Firestore
   type: ProductionType;
-  quantity: number; // liters for milk, kg for meat
-  quality?: string;
-  notes?: string;
+  turno: "mañana" | "tarde" | "noche";
+  ubicacion_ordeño: string;
+  quantity: number;
 }
+
 
 export interface Farm {
   id: string;
@@ -71,6 +110,9 @@ export interface Farm {
     total: number;
   };
 }
+
+
+
 
 export interface Dashboard {
   totalAnimals: number;

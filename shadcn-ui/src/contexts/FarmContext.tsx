@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Animal, HealthRecord, ProductionRecord } from '@/types';
+import { Animal, HealthRecord, ProductionRecord, Genealogy } from '@/types';
 import { toast } from 'sonner';
 import * as firebaseService from '@/services/firebase-service';
 
@@ -9,6 +9,7 @@ interface FarmContextType {
   animals: Animal[];
   healthRecords: HealthRecord[];
   productionRecords: ProductionRecord[];
+  genealogy: Genealogy[];
   
   // Loading states
   isLoading: boolean;
@@ -27,6 +28,11 @@ interface FarmContextType {
   addProductionRecord: (record: Omit<ProductionRecord, 'id'>) => Promise<void>;
   updateProductionRecord: (id: string, record: Partial<Omit<ProductionRecord, 'id'>>) => Promise<void>;
   deleteProductionRecord: (id: string) => Promise<void>;
+  
+  // Genealogy operations
+  addGenealogyRecord: (record: Omit<Genealogy, 'id'>) => Promise<void>;
+  updateGenealogyRecord: (id: string, record: Partial<Omit<Genealogy, 'id'>>) => Promise<void>;
+  deleteGenealogyRecord: (id: string) => Promise<void>;
   
   // Dashboard stats
   dashboardStats: {
@@ -48,6 +54,7 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [healthRecords, setHealthRecords] = useState<HealthRecord[]>([]);
   const [productionRecords, setProductionRecords] = useState<ProductionRecord[]>([]);
+  const [genealogy, setGenealogy] = useState<Genealogy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<FarmContextType['dashboardStats']>(null);
 
@@ -57,22 +64,19 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
       try {
         setIsLoading(true);
         
-        // Load animals
         const animalsData = await firebaseService.getAnimals();
-        console.log("AnimalsData: ", animalsData)
         setAnimals(animalsData);
         
-        // Load health records
         const healthData = await firebaseService.getHealthRecords();
         setHealthRecords(healthData);
         
-        // Load production records
         const productionData = await firebaseService.getProductionRecords();
         setProductionRecords(productionData);
         
-        // Load dashboard stats
-        await refreshDashboardStats();
+        const genealogyData = await firebaseService.getGenealogyRecords();
+        setGenealogy(genealogyData);
         
+        await refreshDashboardStats();
       } catch (error) {
         console.error('Error loading initial data:', error);
         toast.error('Failed to load farm data');
@@ -95,11 +99,11 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Animal operations
+  // ========= Animals =========
   const addAnimal = async (animal: Omit<Animal, 'id'>) => {
     try {
       const id = await firebaseService.addAnimal(animal);
-      const newAnimal = { id, ...animal };
+      const newAnimal: Animal = { id, ...animal };
       setAnimals(prev => [...prev, newAnimal]);
       await refreshDashboardStats();
       toast.success('Animal added successfully');
@@ -127,10 +131,11 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     try {
       await firebaseService.deleteAnimal(id);
       setAnimals(prev => prev.filter(a => a.id !== id));
-      
+
       // Also remove related records
       setHealthRecords(prev => prev.filter(r => r.animalId !== id));
       setProductionRecords(prev => prev.filter(r => r.animalId !== id));
+      setGenealogy(prev => prev.filter(g => g.animalId !== id));
       
       await refreshDashboardStats();
       toast.success('Animal deleted successfully');
@@ -141,7 +146,7 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Health record operations
+  // ========= Health =========
   const addHealthRecord = async (record: Omit<HealthRecord, 'id'>) => {
     try {
       const id = await firebaseService.addHealthRecord(record);
@@ -182,7 +187,7 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Production record operations
+  // ========= Production =========
   const addProductionRecord = async (record: Omit<ProductionRecord, 'id'>) => {
     try {
       const id = await firebaseService.addProductionRecord(record);
@@ -223,12 +228,51 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ========= Genealogy =========
+  const addGenealogyRecord = async (record: Omit<Genealogy, 'id'>) => {
+    try {
+      const id = await firebaseService.addGenealogyRecord(record); // <- servicio devuelve id (== animalId)
+      const newRecord: Genealogy = { id, ...record };
+      setGenealogy(prev => [...prev, newRecord]);
+      toast.success('Genealogy record added successfully');
+    } catch (error) {
+      console.error('Error adding genealogy record:', error);
+      toast.error('Failed to add genealogy record');
+      throw error;
+    }
+  };
+
+  const updateGenealogyRecord = async (id: string, record: Partial<Omit<Genealogy, 'id'>>) => {
+    try {
+      await firebaseService.updateGenealogyRecord(id, record);
+      setGenealogy(prev => prev.map(g => g.id === id ? { ...g, ...record } : g));
+      toast.success('Genealogy record updated successfully');
+    } catch (error) {
+      console.error('Error updating genealogy record:', error);
+      toast.error('Failed to update genealogy record');
+      throw error;
+    }
+  };
+
+  const deleteGenealogyRecord = async (id: string) => {
+    try {
+      await firebaseService.deleteGenealogyRecord(id);
+      setGenealogy(prev => prev.filter(g => g.id !== id));
+      toast.success('Genealogy record deleted successfully');
+    } catch (error) {
+      console.error('Error deleting genealogy record:', error);
+      toast.error('Failed to delete genealogy record');
+      throw error;
+    }
+  };
+
   return (
     <FarmContext.Provider
       value={{
         animals,
         healthRecords,
         productionRecords,
+        genealogy,
         isLoading,
         addAnimal,
         updateAnimal,
@@ -239,6 +283,9 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
         addProductionRecord,
         updateProductionRecord,
         deleteProductionRecord,
+        addGenealogyRecord,
+        updateGenealogyRecord,
+        deleteGenealogyRecord,
         dashboardStats,
         refreshDashboardStats,
       }}
@@ -248,7 +295,7 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook for using the context
+// Custom hook
 export const useFarm = () => {
   const context = useContext(FarmContext);
   if (context === undefined) {

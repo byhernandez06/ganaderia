@@ -18,8 +18,10 @@ import Animals from './pages/Animals';
 import HealthRecords from './pages/HealthRecords';
 import Production from './pages/Production';
 import Reports from './pages/Reports';
+
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
+import Genealogy from './pages/Genealogy';
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,7 @@ const App = () => (
                 <Route path="health-records" element={<HealthRecords />} />
                 <Route path="production" element={<Production />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="genealogy" element={<Genealogy/>} />
                 <Route path="settings" element={<Settings />} />
               </Route>
               
