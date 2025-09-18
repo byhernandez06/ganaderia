@@ -44,15 +44,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Animal, AnimalStatus, AnimalType } from "@/types";
-import { PlusCircle, MoreHorizontal, Filter, Search } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Filter, Search, Eye, Edit, Calendar, Activity, TrendingUp } from "lucide-react";
 
 export default function Animals() {
-  const { animals, addAnimal, updateAnimal, deleteAnimal } = useFarm();
+  const { animals, healthRecords, productionRecords, addAnimal, updateAnimal, deleteAnimal } = useFarm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
+  const [editAnimal, setEditAnimal] = useState<Partial<Animal>>({});
   const [newAnimal, setNewAnimal] = useState<Partial<Animal>>({
     tag: "",
     name: "",
@@ -85,9 +91,24 @@ export default function Animals() {
     });
   };
 
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditAnimal({
+      ...editAnimal,
+      [name]: value
+    });
+  };
+
   const handleSelectChange = (name: string, value: string) => {
     setNewAnimal({
       ...newAnimal,
+      [name]: value
+    });
+  };
+
+  const handleEditSelectChange = (name: string, value: string) => {
+    setEditAnimal({
+      ...editAnimal,
       [name]: value
     });
   };
@@ -109,6 +130,38 @@ export default function Animals() {
     }
   };
 
+  const handleEditAnimal = () => {
+    if (selectedAnimal && editAnimal) {
+      updateAnimal(selectedAnimal.id, editAnimal);
+      setIsEditDialogOpen(false);
+      setSelectedAnimal(null);
+      setEditAnimal({});
+    }
+  };
+
+  const openEditDialog = (animal: Animal) => {
+    setSelectedAnimal(animal);
+    setEditAnimal({
+      tag: animal.tag,
+      name: animal.name || "",
+      type: animal.type,
+      breed: animal.breed,
+      birthDate: typeof animal.birthDate === 'string' ? animal.birthDate : animal.birthDate.toISOString().split("T")[0],
+      gender: animal.gender,
+      status: animal.status,
+      weight: animal.weight,
+      purchaseDate: animal.purchaseDate ? (typeof animal.purchaseDate === 'string' ? animal.purchaseDate : animal.purchaseDate.toISOString().split("T")[0]) : "",
+      purchasePrice: animal.purchasePrice || 0,
+      notes: animal.notes || ""
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const openDetailsDialog = (animal: Animal) => {
+    setSelectedAnimal(animal);
+    setIsDetailsDialogOpen(true);
+  };
+
   const getStatusColor = (status: AnimalStatus) => {
     switch (status) {
       case AnimalStatus.HEALTHY:
@@ -124,6 +177,19 @@ export default function Animals() {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const getAnimalHealthRecords = (animalId: string) => {
+    return healthRecords.filter(record => record.animalId === animalId);
+  };
+
+  const getAnimalProductionRecords = (animalId: string) => {
+    return productionRecords.filter(record => record.animalId === animalId);
+  };
+
+  const formatDate = (date: Date | string) => {
+    const d = new Date(date);
+    return d.toLocaleDateString('es-ES');
   };
 
   return (
@@ -142,7 +208,7 @@ export default function Animals() {
               Agregar Animal
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Agregar Nuevo Animal</DialogTitle>
               <DialogDescription>
@@ -273,6 +339,341 @@ export default function Animals() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Animal Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Animal</DialogTitle>
+            <DialogDescription>
+              Modifica los detalles del animal seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-tag">Etiqueta/Arete</Label>
+                <Input
+                  id="edit-tag"
+                  name="tag"
+                  placeholder="ABC123"
+                  value={editAnimal.tag || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Nombre (Opcional)</Label>
+                <Input
+                  id="edit-name"
+                  name="name"
+                  placeholder="Nombre"
+                  value={editAnimal.name || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Tipo</Label>
+                <Select
+                  onValueChange={(value) => handleEditSelectChange("type", value)}
+                  value={editAnimal.type}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value={AnimalType.DAIRY_CATTLE}>Ganado Lechero</SelectItem>
+                      <SelectItem value={AnimalType.BEEF_CATTLE}>Ganado Cárnico</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-breed">Raza</Label>
+                <Input
+                  id="edit-breed"
+                  name="breed"
+                  placeholder="Holstein, Angus, etc."
+                  value={editAnimal.breed || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-birthDate">Fecha de Nacimiento</Label>
+                <Input
+                  id="edit-birthDate"
+                  name="birthDate"
+                  type="date"
+                  value={editAnimal.birthDate as string || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-gender">Género</Label>
+                <Select
+                  onValueChange={(value) => handleEditSelectChange("gender", value)}
+                  value={editAnimal.gender}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar género" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="female">Hembra</SelectItem>
+                      <SelectItem value="male">Macho</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Estado</Label>
+                <Select
+                  onValueChange={(value) => handleEditSelectChange("status", value)}
+                  value={editAnimal.status}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value={AnimalStatus.HEALTHY}>Saludable</SelectItem>
+                      <SelectItem value={AnimalStatus.SICK}>Enfermo</SelectItem>
+                      <SelectItem value={AnimalStatus.PREGNANT}>Preñada</SelectItem>
+                      <SelectItem value={AnimalStatus.LACTATING}>Lactando</SelectItem>
+                      <SelectItem value={AnimalStatus.DRY}>Seca</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-weight">Peso (kg)</Label>
+                <Input
+                  id="edit-weight"
+                  name="weight"
+                  type="number"
+                  placeholder="0"
+                  value={editAnimal.weight?.toString() || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-purchaseDate">Fecha de Compra (Opcional)</Label>
+                <Input
+                  id="edit-purchaseDate"
+                  name="purchaseDate"
+                  type="date"
+                  value={editAnimal.purchaseDate as string || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-purchasePrice">Precio de Compra (Opcional)</Label>
+                <Input
+                  id="edit-purchasePrice"
+                  name="purchasePrice"
+                  type="number"
+                  placeholder="0"
+                  value={editAnimal.purchasePrice?.toString() || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">Notas (Opcional)</Label>
+              <Textarea
+                id="edit-notes"
+                name="notes"
+                placeholder="Notas adicionales sobre el animal..."
+                value={editAnimal.notes || ""}
+                onChange={handleEditInputChange}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditAnimal}>Guardar Cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Animal Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Detalles del Animal
+            </DialogTitle>
+            <DialogDescription>
+              Información completa del animal seleccionado
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAnimal && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Información Básica</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Etiqueta/Arete</Label>
+                    <p className="text-sm font-medium">{selectedAnimal.tag}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Nombre</Label>
+                    <p className="text-sm">{selectedAnimal.name || "Sin nombre"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Tipo</Label>
+                    <p className="text-sm">{selectedAnimal.type === AnimalType.DAIRY_CATTLE ? "Ganado Lechero" : "Ganado Cárnico"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Raza</Label>
+                    <p className="text-sm">{selectedAnimal.breed}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Fecha de Nacimiento</Label>
+                    <p className="text-sm">{formatDate(selectedAnimal.birthDate)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Género</Label>
+                    <p className="text-sm">{selectedAnimal.gender === "female" ? "Hembra" : "Macho"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Estado</Label>
+                    <Badge variant="outline" className={getStatusColor(selectedAnimal.status)}>
+                      {selectedAnimal.status === AnimalStatus.HEALTHY && "Saludable"}
+                      {selectedAnimal.status === AnimalStatus.SICK && "Enfermo"}
+                      {selectedAnimal.status === AnimalStatus.PREGNANT && "Preñada"}
+                      {selectedAnimal.status === AnimalStatus.LACTATING && "Lactando"}
+                      {selectedAnimal.status === AnimalStatus.DRY && "Seca"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Peso</Label>
+                    <p className="text-sm">{selectedAnimal.weight} kg</p>
+                  </div>
+                  {selectedAnimal.purchaseDate && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Fecha de Compra</Label>
+                      <p className="text-sm">{formatDate(selectedAnimal.purchaseDate)}</p>
+                    </div>
+                  )}
+                  {selectedAnimal.purchasePrice && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Precio de Compra</Label>
+                      <p className="text-sm">${selectedAnimal.purchasePrice}</p>
+                    </div>
+                  )}
+                </CardContent>
+                {selectedAnimal.notes && (
+                  <>
+                    <Separator />
+                    <CardContent>
+                      <Label className="text-sm font-medium text-muted-foreground">Notas</Label>
+                      <p className="text-sm mt-1">{selectedAnimal.notes}</p>
+                    </CardContent>
+                  </>
+                )}
+              </Card>
+
+              {/* Health Records */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Activity className="h-5 w-5" />
+                    Registros de Salud
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {getAnimalHealthRecords(selectedAnimal.id).length > 0 ? (
+                    <div className="space-y-3">
+                      {getAnimalHealthRecords(selectedAnimal.id).map((record) => (
+                        <div key={record.id} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-medium text-sm">{record.description}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(record.date)}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {record.type === "vaccination" && "Vacunación"}
+                              {record.type === "treatment" && "Tratamiento"}
+                              {record.type === "checkup" && "Chequeo"}
+                            </Badge>
+                          </div>
+                          {record.medicine && (
+                            <p className="text-xs text-muted-foreground">Medicina: {record.medicine}</p>
+                          )}
+                          {record.veterinarian && (
+                            <p className="text-xs text-muted-foreground">Veterinario: {record.veterinarian}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No hay registros de salud disponibles.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Production Records */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <TrendingUp className="h-5 w-5" />
+                    Registros de Producción
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {getAnimalProductionRecords(selectedAnimal.id).length > 0 ? (
+                    <div className="space-y-3">
+                      {getAnimalProductionRecords(selectedAnimal.id).map((record) => (
+                        <div key={record.id} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-medium text-sm">
+                                {record.quantity} {record.type === "milk" ? "litros de leche" : "kg de carne"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{formatDate(record.date)}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {record.type === "milk" ? "Leche" : "Carne"}
+                            </Badge>
+                          </div>
+                          {record.quality && (
+                            <p className="text-xs text-muted-foreground">Calidad: {record.quality}</p>
+                          )}
+                          {record.notes && (
+                            <p className="text-xs text-muted-foreground">Notas: {record.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No hay registros de producción disponibles.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Card>
         <CardHeader>
@@ -401,8 +802,14 @@ export default function Animals() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-                              <DropdownMenuItem>Editar</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openDetailsDialog(animal)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver detalles
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditDialog(animal)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-red-600"
                                 onClick={() => deleteAnimal(animal.id)}
