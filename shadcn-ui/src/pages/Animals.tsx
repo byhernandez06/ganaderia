@@ -47,7 +47,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Animal, AnimalStatus, AnimalType } from "@/types";
-import { PlusCircle, MoreHorizontal, Filter, Search, Eye, Edit, Calendar, Activity, TrendingUp } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Filter, Search, Eye, Edit, Calendar, Activity, TrendingUp, Users } from "lucide-react";
 
 export default function Animals() {
   const { animals, healthRecords, productionRecords, addAnimal, updateAnimal, deleteAnimal } = useFarm();
@@ -146,13 +146,15 @@ export default function Animals() {
       name: animal.name || "",
       type: animal.type,
       breed: animal.breed,
-      birthDate: typeof animal.birthDate === 'string' ? animal.birthDate : animal.birthDate.toISOString().split("T")[0],
+      birthDate: typeof animal.birthDate === 'string' ? animal.birthDate : animal?.birthDate?.toISOString().split("T")[0],
       gender: animal.gender,
       status: animal.status,
       weight: animal.weight,
       purchaseDate: animal.purchaseDate ? (typeof animal.purchaseDate === 'string' ? animal.purchaseDate : animal.purchaseDate.toISOString().split("T")[0]) : "",
       purchasePrice: animal.purchasePrice || 0,
-      notes: animal.notes || ""
+      notes: animal.notes || "",
+      parentMaleId: animal.parentMaleId || "",
+      parentFemaleId: animal.parentFemaleId || ""
     });
     setIsEditDialogOpen(true);
   };
@@ -188,8 +190,49 @@ export default function Animals() {
   };
 
   const formatDate = (date: Date | string) => {
+    if (!date) return "No disponible";
     const d = new Date(date);
+    if (isNaN(d.getTime())) return "Fecha inválida";
     return d.toLocaleDateString('es-ES');
+  };
+
+  const calculateAge = (birthDate: Date | string) => {
+    if (!birthDate) return "No disponible";
+    
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) return "Fecha inválida";
+    
+    const now = new Date();
+    const ageInMs = now.getTime() - birth.getTime();
+    const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25);
+    
+    if (ageInYears < 1) {
+      const ageInMonths = Math.floor(ageInYears * 12);
+      return `${ageInMonths} ${ageInMonths === 1 ? 'mes' : 'meses'}`;
+    }
+    
+    return `${ageInYears.toFixed(1)} años`;
+  };
+
+  const findAnimalById = (id: string) => {
+    return animals.find(animal => animal.id === id);
+  };
+
+  const getParentInfo = (parentId: string | undefined) => {
+    if (!parentId) return null;
+    const parent = findAnimalById(parentId);
+    return parent ? `${parent.tag} - ${parent.name || 'Sin nombre'}` : "Animal no encontrado";
+  };
+
+  const getGrandparents = (parentId: string | undefined) => {
+    if (!parentId) return { maternal: null, paternal: null };
+    const parent = findAnimalById(parentId);
+    if (!parent) return { maternal: null, paternal: null };
+    
+    return {
+      maternal: parent.parentFemaleId ? getParentInfo(parent.parentFemaleId) : null,
+      paternal: parent.parentMaleId ? getParentInfo(parent.parentMaleId) : null
+    };
   };
 
   return (
@@ -208,7 +251,7 @@ export default function Animals() {
               Agregar Animal
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Agregar Nuevo Animal</DialogTitle>
               <DialogDescription>
@@ -327,6 +370,44 @@ export default function Animals() {
                     value={newAnimal.weight?.toString()}
                     onChange={handleInputChange}
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="parentFemaleId">Madre (Opcional)</Label>
+                  <Select onValueChange={(value) => handleSelectChange("parentFemaleId", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar madre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="">Sin madre registrada</SelectItem>
+                        {animals.filter(a => a.gender === "female").map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="parentMaleId">Padre (Opcional)</Label>
+                  <Select onValueChange={(value) => handleSelectChange("parentMaleId", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar padre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="">Sin padre registrado</SelectItem>
+                        {animals.filter(a => a.gender === "male").map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -465,6 +546,50 @@ export default function Animals() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="edit-parentFemaleId">Madre (Opcional)</Label>
+                <Select 
+                  onValueChange={(value) => handleEditSelectChange("parentFemaleId", value)}
+                  value={editAnimal.parentFemaleId || ""}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar madre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="">Sin madre registrada</SelectItem>
+                      {animals.filter(a => a.gender === "female" && a.id !== selectedAnimal?.id).map((animal) => (
+                        <SelectItem key={animal.id} value={animal.id}>
+                          {animal.tag} - {animal.name || "Sin nombre"}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-parentMaleId">Padre (Opcional)</Label>
+                <Select 
+                  onValueChange={(value) => handleEditSelectChange("parentMaleId", value)}
+                  value={editAnimal.parentMaleId || ""}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar padre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="">Sin padre registrado</SelectItem>
+                      {animals.filter(a => a.gender === "male" && a.id !== selectedAnimal?.id).map((animal) => (
+                        <SelectItem key={animal.id} value={animal.id}>
+                          {animal.tag} - {animal.name || "Sin nombre"}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="edit-purchaseDate">Fecha de Compra (Opcional)</Label>
                 <Input
                   id="edit-purchaseDate"
@@ -547,6 +672,10 @@ export default function Animals() {
                     <p className="text-sm">{formatDate(selectedAnimal.birthDate)}</p>
                   </div>
                   <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Edad</Label>
+                    <p className="text-sm">{calculateAge(selectedAnimal.birthDate)}</p>
+                  </div>
+                  <div>
                     <Label className="text-sm font-medium text-muted-foreground">Género</Label>
                     <p className="text-sm">{selectedAnimal.gender === "female" ? "Hembra" : "Macho"}</p>
                   </div>
@@ -586,6 +715,65 @@ export default function Animals() {
                     </CardContent>
                   </>
                 )}
+              </Card>
+
+              {/* Genealogy Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="h-5 w-5" />
+                    Información Genealógica
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Parents */}
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground mb-2 block">Padres</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="border rounded-lg p-3">
+                        <Label className="text-xs font-medium text-muted-foreground">Madre</Label>
+                        <p className="text-sm">{getParentInfo(selectedAnimal.parentFemaleId) || "No registrada"}</p>
+                      </div>
+                      <div className="border rounded-lg p-3">
+                        <Label className="text-xs font-medium text-muted-foreground">Padre</Label>
+                        <p className="text-sm">{getParentInfo(selectedAnimal.parentMaleId) || "No registrado"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Grandparents */}
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground mb-2 block">Abuelos</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Línea Materna</Label>
+                        <div className="space-y-1">
+                          <div className="border rounded p-2">
+                            <Label className="text-xs text-muted-foreground">Abuela Materna</Label>
+                            <p className="text-xs">{getGrandparents(selectedAnimal.parentFemaleId).maternal || "No registrada"}</p>
+                          </div>
+                          <div className="border rounded p-2">
+                            <Label className="text-xs text-muted-foreground">Abuelo Materno</Label>
+                            <p className="text-xs">{getGrandparents(selectedAnimal.parentFemaleId).paternal || "No registrado"}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Línea Paterna</Label>
+                        <div className="space-y-1">
+                          <div className="border rounded p-2">
+                            <Label className="text-xs text-muted-foreground">Abuela Paterna</Label>
+                            <p className="text-xs">{getGrandparents(selectedAnimal.parentMaleId).maternal || "No registrada"}</p>
+                          </div>
+                          <div className="border rounded p-2">
+                            <Label className="text-xs text-muted-foreground">Abuelo Paterno</Label>
+                            <p className="text-xs">{getGrandparents(selectedAnimal.parentMaleId).paternal || "No registrado"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
               </Card>
 
               {/* Health Records */}
@@ -770,10 +958,6 @@ export default function Animals() {
                 </TableHeader>
                 <TableBody>
                   {filteredAnimals.map((animal) => {
-                    const birthDate = new Date(animal.birthDate);
-                    const ageInMs = new Date().getTime() - birthDate.getTime();
-                    const ageInYears = (ageInMs / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
-                    
                     return (
                       <TableRow key={animal.id}>
                         <TableCell className="font-medium">{animal.tag}</TableCell>
@@ -792,7 +976,7 @@ export default function Animals() {
                           </Badge>
                         </TableCell>
                         <TableCell>{animal.weight} kg</TableCell>
-                        <TableCell>{ageInYears} años</TableCell>
+                        <TableCell>{calculateAge(animal.birthDate)}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
