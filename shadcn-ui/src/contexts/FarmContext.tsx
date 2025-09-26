@@ -95,21 +95,6 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Animal operations
-  // const addAnimal = async (animal: Omit<Animal, 'id'>) => {
-  //   try {
-  //     const id = await firebaseService.addAnimal(animal);
-  //     const newAnimal = { id, ...animal };
-  //     setAnimals(prev => [...prev, newAnimal]);
-  //     await refreshDashboardStats();
-  //     toast.success('Animal added successfully');
-  //   } catch (error) {
-  //     console.error('Error adding animal:', error);
-  //     toast.error('Failed to add animal');
-  //     throw error;
-  //   }
-  // };
-
   const addAnimal = async (animal: Omit<Animal, "id">) => {
     try {
       const newAnimal = await firebaseService.addAnimal(animal);
