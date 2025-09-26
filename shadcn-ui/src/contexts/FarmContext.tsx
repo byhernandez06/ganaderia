@@ -9,25 +9,25 @@ interface FarmContextType {
   animals: Animal[];
   healthRecords: HealthRecord[];
   productionRecords: ProductionRecord[];
-  
+
   // Loading states
   isLoading: boolean;
-  
+
   // Animal operations
   addAnimal: (animal: Omit<Animal, 'id'>) => Promise<void>;
   updateAnimal: (id: string, animal: Partial<Omit<Animal, 'id'>>) => Promise<void>;
   deleteAnimal: (id: string) => Promise<void>;
-  
+
   // Health record operations
   addHealthRecord: (record: Omit<HealthRecord, 'id'>) => Promise<void>;
   updateHealthRecord: (id: string, record: Partial<Omit<HealthRecord, 'id'>>) => Promise<void>;
   deleteHealthRecord: (id: string) => Promise<void>;
-  
+
   // Production record operations
   addProductionRecord: (record: Omit<ProductionRecord, 'id'>) => Promise<void>;
   updateProductionRecord: (id: string, record: Partial<Omit<ProductionRecord, 'id'>>) => Promise<void>;
   deleteProductionRecord: (id: string) => Promise<void>;
-  
+
   // Dashboard stats
   dashboardStats: {
     totalAnimals: number;
@@ -56,23 +56,23 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     const loadInitialData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Load animals
         const animalsData = await firebaseService.getAnimals();
         console.log("AnimalsData: ", animalsData)
         setAnimals(animalsData);
-        
+
         // Load health records
         const healthData = await firebaseService.getHealthRecords();
         setHealthRecords(healthData);
-        
+
         // Load production records
         const productionData = await firebaseService.getProductionRecords();
         setProductionRecords(productionData);
-        
+
         // Load dashboard stats
         await refreshDashboardStats();
-        
+
       } catch (error) {
         console.error('Error loading initial data:', error);
         toast.error('Failed to load farm data');
@@ -96,19 +96,33 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Animal operations
-  const addAnimal = async (animal: Omit<Animal, 'id'>) => {
+  // const addAnimal = async (animal: Omit<Animal, 'id'>) => {
+  //   try {
+  //     const id = await firebaseService.addAnimal(animal);
+  //     const newAnimal = { id, ...animal };
+  //     setAnimals(prev => [...prev, newAnimal]);
+  //     await refreshDashboardStats();
+  //     toast.success('Animal added successfully');
+  //   } catch (error) {
+  //     console.error('Error adding animal:', error);
+  //     toast.error('Failed to add animal');
+  //     throw error;
+  //   }
+  // };
+
+  const addAnimal = async (animal: Omit<Animal, "id">) => {
     try {
-      const id = await firebaseService.addAnimal(animal);
-      const newAnimal = { id, ...animal };
+      const newAnimal = await firebaseService.addAnimal(animal);
       setAnimals(prev => [...prev, newAnimal]);
       await refreshDashboardStats();
-      toast.success('Animal added successfully');
+      toast.success("Animal added successfully");
     } catch (error) {
-      console.error('Error adding animal:', error);
-      toast.error('Failed to add animal');
+      console.error("Error adding animal:", error);
+      toast.error("Failed to add animal");
       throw error;
     }
   };
+
 
   const updateAnimal = async (id: string, animal: Partial<Omit<Animal, 'id'>>) => {
     try {
@@ -127,11 +141,11 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
     try {
       await firebaseService.deleteAnimal(id);
       setAnimals(prev => prev.filter(a => a.id !== id));
-      
+
       // Also remove related records
       setHealthRecords(prev => prev.filter(r => r.animalId !== id));
       setProductionRecords(prev => prev.filter(r => r.animalId !== id));
-      
+
       await refreshDashboardStats();
       toast.success('Animal deleted successfully');
     } catch (error) {

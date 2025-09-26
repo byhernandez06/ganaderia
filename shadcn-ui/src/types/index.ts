@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export enum AnimalType {
   DAIRY_CATTLE = "dairy_cattle",
   BEEF_CATTLE = "beef_cattle"
@@ -16,23 +18,31 @@ export enum ProductionType {
   MEAT = "meat"
 }
 
+export interface ParentInfo {
+  father?: { code: string; name: string };
+  mother?: { code: string; name: string };
+  maternalGrandfather?: { code: string; name: string };
+  maternalGrandmother?: { code: string; name: string };
+  paternalGrandfather?: { code: string; name: string };
+  paternalGrandmother?: { code: string; name: string };
+}
+
 export interface Animal {
   id: string;
   tag: string;
   name?: string;
   type: AnimalType;
   breed: string;
-  birthDate: Date | string;
+  birthDate: Timestamp;
   gender: "male" | "female";
   status: AnimalStatus;
   weight: number;
-  purchaseDate?: Date | string;
+  purchaseDate?: Timestamp;
   purchasePrice?: number;
   notes?: string;
   health: HealthRecord[];
   production: ProductionRecord[];
-  parentMaleId?: string;
-  parentFemaleId?: string;
+  parentInfo?: ParentInfo;   // 👈 en lugar de parentMaleId/parentFemaleId
   imageUrl?: string;
 }
 
