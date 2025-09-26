@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Timestamp } from "firebase/firestore";
 import { useFarm } from "@/contexts/FarmContext";
 import {
   Card,
@@ -113,9 +114,17 @@ export default function Animals() {
     });
   };
 
-  const handleAddAnimal = () => {
-    if (newAnimal.tag && newAnimal.breed && newAnimal.type && newAnimal.status && newAnimal.weight) {
-      addAnimal(newAnimal as Omit<Animal, "id" | "health" | "production">);
+  const handleAddAnimal = async () => {
+    if (
+      newAnimal.tag &&
+      newAnimal.breed &&
+      newAnimal.type &&
+      newAnimal.status &&
+      newAnimal.weight
+    ) {
+      await addAnimal(newAnimal);
+
+      // Reset del formulario
       setNewAnimal({
         tag: "",
         name: "",
@@ -124,8 +133,17 @@ export default function Animals() {
         birthDate: new Date().toISOString().split("T")[0],
         gender: "female",
         status: AnimalStatus.HEALTHY,
-        weight: 0
+        weight: 0,
+        parentInfo: {
+          father: null,
+          mother: null,
+          maternalGrandfather: null,
+          maternalGrandmother: null,
+          paternalGrandfather: null,
+          paternalGrandmother: null,
+        },
       });
+
       setIsAddDialogOpen(false);
     }
   };
@@ -139,25 +157,50 @@ export default function Animals() {
     }
   };
 
+  const toFormDateString = (d: any): string => {
+    if (!d) return "";
+    // Firestore Timestamp
+    if (typeof d === "object" && typeof d.toDate === "function") {
+      return d.toDate().toISOString().split("T")[0];
+    }
+    if (d instanceof Date) return d.toISOString().split("T")[0];
+    if (typeof d === "string") return d;
+    return "";
+  };
+
+  // helper: texto para mostrar ParentReference
+  const getParentDisplay = (p?: { id: string; tag?: string; name?: string } | null) =>
+    p ? `${p.tag ? `${p.tag}${p.name ? " · " : ""}` : ""}${p.name ?? p.id}` : "";
+
   const openEditDialog = (animal: Animal) => {
     setSelectedAnimal(animal);
+
     setEditAnimal({
       tag: animal.tag,
-      name: animal.name || "",
+      name: animal.name ?? "",
       type: animal.type,
       breed: animal.breed,
-      birthDate: typeof animal.birthDate === 'string' ? animal.birthDate : animal?.birthDate?.toISOString().split("T")[0],
+      birthDate: toFormDateString((animal as any).birthDate),
       gender: animal.gender,
       status: animal.status,
       weight: animal.weight,
-      purchaseDate: animal.purchaseDate ? (typeof animal.purchaseDate === 'string' ? animal.purchaseDate : animal.purchaseDate.toISOString().split("T")[0]) : "",
-      purchasePrice: animal.purchasePrice || 0,
-      notes: animal.notes || "",
-      parentMaleId: animal.parentMaleId || "",
-      parentFemaleId: animal.parentFemaleId || ""
+      purchaseDate: toFormDateString((animal as any).purchaseDate),
+      purchasePrice: animal.purchasePrice ?? null,
+      notes: animal.notes ?? "",
+      parentInfo: {
+        mother: animal.parentInfo?.mother ?? null,
+        father: animal.parentInfo?.father ?? null,
+        maternalGrandfather: animal.parentInfo?.maternalGrandfather ?? null,
+        maternalGrandmother: animal.parentInfo?.maternalGrandmother ?? null,
+        paternalGrandfather: animal.parentInfo?.paternalGrandfather ?? null,
+        paternalGrandmother: animal.parentInfo?.paternalGrandmother ?? null,
+      },
+      imageUrl: animal.imageUrl ?? null,
     });
+
     setIsEditDialogOpen(true);
   };
+
 
   const openDetailsDialog = (animal: Animal) => {
     setSelectedAnimal(animal);
@@ -196,39 +239,47 @@ export default function Animals() {
     return d.toLocaleDateString('es-ES');
   };
 
-  const calculateAge = (birthDate: Date | string) => {
+  const calculateAge = (birthDate: Date | string | null | undefined) => {
     if (!birthDate) return "No disponible";
-    
-    const birth = new Date(birthDate);
-    if (isNaN(birth.getTime())) return "Fecha inválida";
-    
+
+    let birth: Date;
+
+    // Si es Firestore Timestamp
+    if (typeof birthDate === "object" && "seconds" in birthDate) {
+      birth = new Date(birthDate.seconds * 1000);
+    } else {
+      birth = new Date(birthDate);
+    }
+
+    if (isNaN(birth.getTime())) return "No disponible"; // en lugar de "Fecha inválida"
+
     const now = new Date();
     const ageInMs = now.getTime() - birth.getTime();
     const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25);
-    
+
     if (ageInYears < 1) {
       const ageInMonths = Math.floor(ageInYears * 12);
-      return `${ageInMonths} ${ageInMonths === 1 ? 'mes' : 'meses'}`;
+      return `${ageInMonths} ${ageInMonths === 1 ? "mes" : "meses"}`;
     }
-    
+
     return `${ageInYears.toFixed(1)} años`;
   };
+
 
   const findAnimalById = (id: string) => {
     return animals.find(animal => animal.id === id);
   };
 
-  const getParentInfo = (parentId: string | undefined) => {
-    if (!parentId) return null;
-    const parent = findAnimalById(parentId);
-    return parent ? `${parent.tag} - ${parent.name || 'Sin nombre'}` : "Animal no encontrado";
-  };
+  function getParentInfo(parent?: { id: string; tag?: string; name?: string } | null): string {
+    if (!parent) return "";
+    return `${parent.tag || ""} ${parent.name || ""}`.trim();
+  }
 
   const getGrandparents = (parentId: string | undefined) => {
     if (!parentId) return { maternal: null, paternal: null };
     const parent = findAnimalById(parentId);
     if (!parent) return { maternal: null, paternal: null };
-    
+
     return {
       maternal: parent.parentFemaleId ? getParentInfo(parent.parentFemaleId) : null,
       paternal: parent.parentMaleId ? getParentInfo(parent.parentMaleId) : null
@@ -259,6 +310,7 @@ export default function Animals() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Tag & Nombre */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="tag">Etiqueta/Arete</Label>
@@ -281,6 +333,8 @@ export default function Animals() {
                   />
                 </div>
               </div>
+
+              {/* Tipo & Raza */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="type">Tipo</Label>
@@ -310,6 +364,8 @@ export default function Animals() {
                   />
                 </div>
               </div>
+
+              {/* Fecha nacimiento & Género */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
@@ -339,6 +395,8 @@ export default function Animals() {
                   </Select>
                 </div>
               </div>
+
+              {/* Estado & Peso */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Estado</Label>
@@ -372,45 +430,263 @@ export default function Animals() {
                   />
                 </div>
               </div>
+
+              {/* Padre & Madre */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="parentFemaleId">Madre (Opcional)</Label>
-                  <Select onValueChange={(value) => handleSelectChange("parentFemaleId", value)}>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewAnimal((prev) => {
+                        const mother = animals.find((a) => a.id === value);
+                        return {
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            mother:
+                              value !== "none"
+                                ? {
+                                  id: mother?.id || "",
+                                  tag: mother?.tag,
+                                  name: mother?.name || mother?.tag || "Sin nombre",
+                                }
+                                : null,
+                          },
+                        };
+                      })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar madre" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="">Sin madre registrada</SelectItem>
-                        {animals.filter(a => a.gender === "female").map((animal) => (
-                          <SelectItem key={animal.id} value={animal.id}>
-                            {animal.tag} - {animal.name || "Sin nombre"}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="none">Sin madre registrada</SelectItem>
+                        {animals
+                          .filter((a) => a.gender === "female")
+                          .map((animal) => (
+                            <SelectItem key={animal.id} value={animal.id}>
+                              {animal.tag} - {animal.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="parentMaleId">Padre (Opcional)</Label>
-                  <Select onValueChange={(value) => handleSelectChange("parentMaleId", value)}>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewAnimal((prev) => {
+                        const father = animals.find((a) => a.id === value);
+                        return {
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            father:
+                              value !== "none"
+                                ? {
+                                  id: father?.id || "",
+                                  tag: father?.tag,
+                                  name: father?.name || father?.tag || "Sin nombre",
+                                }
+                                : null,
+                          },
+                        };
+                      })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar padre" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="">Sin padre registrado</SelectItem>
-                        {animals.filter(a => a.gender === "male").map((animal) => (
-                          <SelectItem key={animal.id} value={animal.id}>
-                            {animal.tag} - {animal.name || "Sin nombre"}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="none">Sin padre registrado</SelectItem>
+                        {animals
+                          .filter((a) => a.gender === "male")
+                          .map((animal) => (
+                            <SelectItem key={animal.id} value={animal.id}>
+                              {animal.tag} - {animal.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Abuelos Maternos */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Abuelo Materno</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewAnimal((prev) => {
+                        const abuelo = animals.find((a) => a.id === value);
+                        return {
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            maternalGrandfather:
+                              value !== "none"
+                                ? {
+                                  id: abuelo?.id || "",
+                                  tag: abuelo?.tag,
+                                  name: abuelo?.name || abuelo?.tag || "Sin nombre",
+                                }
+                                : null,
+                          },
+                        };
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar abuelo materno" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">Sin abuelo registrado</SelectItem>
+                        {animals
+                          .filter((a) => a.gender === "male")
+                          .map((animal) => (
+                            <SelectItem key={animal.id} value={animal.id}>
+                              {animal.tag} - {animal.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Abuela Materna</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewAnimal((prev) => {
+                        const abuela = animals.find((a) => a.id === value);
+                        return {
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            maternalGrandmother:
+                              value !== "none"
+                                ? {
+                                  id: abuela?.id || "",
+                                  tag: abuela?.tag,
+                                  name: abuela?.name || abuela?.tag || "Sin nombre",
+                                }
+                                : null,
+                          },
+                        };
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar abuela materna" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">Sin abuela registrada</SelectItem>
+                        {animals
+                          .filter((a) => a.gender === "female")
+                          .map((animal) => (
+                            <SelectItem key={animal.id} value={animal.id}>
+                              {animal.tag} - {animal.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Abuelos Paternos */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Abuelo Paterno</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewAnimal((prev) => {
+                        const abuelo = animals.find((a) => a.id === value);
+                        return {
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            paternalGrandfather:
+                              value !== "none"
+                                ? {
+                                  id: abuelo?.id || "",
+                                  tag: abuelo?.tag,
+                                  name: abuelo?.name || abuelo?.tag || "Sin nombre",
+                                }
+                                : null,
+                          },
+                        };
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar abuelo paterno" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">Sin abuelo registrado</SelectItem>
+                        {animals
+                          .filter((a) => a.gender === "male")
+                          .map((animal) => (
+                            <SelectItem key={animal.id} value={animal.id}>
+                              {animal.tag} - {animal.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Abuela Paterna</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewAnimal((prev) => {
+                        const abuela = animals.find((a) => a.id === value);
+                        return {
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            paternalGrandmother:
+                              value !== "none"
+                                ? {
+                                  id: abuela?.id || "",
+                                  tag: abuela?.tag,
+                                  name: abuela?.name || abuela?.tag || "Sin nombre",
+                                }
+                                : null,
+                          },
+                        };
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar abuela paterna" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">Sin abuela registrada</SelectItem>
+                        {animals
+                          .filter((a) => a.gender === "female")
+                          .map((animal) => (
+                            <SelectItem key={animal.id} value={animal.id}>
+                              {animal.tag} - {animal.name || "Sin nombre"}
+                            </SelectItem>
+                          ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </div>
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancelar
@@ -419,6 +695,7 @@ export default function Animals() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
 
       {/* Edit Animal Dialog */}
@@ -430,7 +707,9 @@ export default function Animals() {
               Modifica los detalles del animal seleccionado.
             </DialogDescription>
           </DialogHeader>
+
           <div className="grid gap-4 py-4">
+            {/* --- BASIC FIELDS --- */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-tag">Etiqueta/Arete</Label>
@@ -453,12 +732,14 @@ export default function Animals() {
                 />
               </div>
             </div>
+
+            {/* Tipo & Raza */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-type">Tipo</Label>
                 <Select
                   onValueChange={(value) => handleEditSelectChange("type", value)}
-                  value={editAnimal.type}
+                  value={editAnimal.type as string | undefined}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar tipo" />
@@ -482,6 +763,8 @@ export default function Animals() {
                 />
               </div>
             </div>
+
+            {/* Fecha nacimiento & Género */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-birthDate">Fecha de Nacimiento</Label>
@@ -489,7 +772,7 @@ export default function Animals() {
                   id="edit-birthDate"
                   name="birthDate"
                   type="date"
-                  value={editAnimal.birthDate as string || ""}
+                  value={(editAnimal.birthDate as string) || ""}
                   onChange={handleEditInputChange}
                 />
               </div>
@@ -497,7 +780,7 @@ export default function Animals() {
                 <Label htmlFor="edit-gender">Género</Label>
                 <Select
                   onValueChange={(value) => handleEditSelectChange("gender", value)}
-                  value={editAnimal.gender}
+                  value={editAnimal.gender as string | undefined}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar género" />
@@ -511,12 +794,14 @@ export default function Animals() {
                 </Select>
               </div>
             </div>
+
+            {/* Estado & Peso */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Estado</Label>
                 <Select
                   onValueChange={(value) => handleEditSelectChange("status", value)}
-                  value={editAnimal.status}
+                  value={editAnimal.status as string | undefined}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar estado" />
@@ -544,50 +829,343 @@ export default function Animals() {
                 />
               </div>
             </div>
+
+            {/* Padre & Madre (controlados, muestran valor actual) */}
             <div className="grid grid-cols-2 gap-4">
+              {/* Madre */}
               <div className="space-y-2">
                 <Label htmlFor="edit-parentFemaleId">Madre (Opcional)</Label>
-                <Select 
-                  onValueChange={(value) => handleEditSelectChange("parentFemaleId", value)}
-                  value={editAnimal.parentFemaleId || ""}
+                <Select
+                  value={editAnimal.parentInfo?.mother?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const mother = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        mother:
+                          value !== "none"
+                            ? {
+                              id: mother?.id || "",
+                              tag: mother?.tag,
+                              name: mother?.name || mother?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar madre" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="">Sin madre registrada</SelectItem>
-                      {animals.filter(a => a.gender === "female" && a.id !== selectedAnimal?.id).map((animal) => (
-                        <SelectItem key={animal.id} value={animal.id}>
-                          {animal.tag} - {animal.name || "Sin nombre"}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="none">Sin madre registrada</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "female" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Padre */}
               <div className="space-y-2">
                 <Label htmlFor="edit-parentMaleId">Padre (Opcional)</Label>
-                <Select 
-                  onValueChange={(value) => handleEditSelectChange("parentMaleId", value)}
-                  value={editAnimal.parentMaleId || ""}
+                <Select
+                  value={editAnimal.parentInfo?.father?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const father = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        father:
+                          value !== "none"
+                            ? {
+                              id: father?.id || "",
+                              tag: father?.tag,
+                              name: father?.name || father?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar padre" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="">Sin padre registrado</SelectItem>
-                      {animals.filter(a => a.gender === "male" && a.id !== selectedAnimal?.id).map((animal) => (
-                        <SelectItem key={animal.id} value={animal.id}>
-                          {animal.tag} - {animal.name || "Sin nombre"}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="none">Sin padre registrado</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "male" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+            </div>
+
+            {/* === Parent Info === */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Madre */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-mother">Madre (Opcional)</Label>
+                <Select
+                  value={editAnimal.parentInfo?.mother?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const mother = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        mother:
+                          value !== "none"
+                            ? {
+                              id: mother?.id || "",
+                              tag: mother?.tag,
+                              name: mother?.name || mother?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar madre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">Sin madre registrada</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "female" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Padre */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-father">Padre (Opcional)</Label>
+                <Select
+                  value={editAnimal.parentInfo?.father?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const father = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        father:
+                          value !== "none"
+                            ? {
+                              id: father?.id || "",
+                              tag: father?.tag,
+                              name: father?.name || father?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar padre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">Sin padre registrado</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "male" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Abuelo Materno */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-maternalGrandfather">Abuelo Materno</Label>
+                <Select
+                  value={editAnimal.parentInfo?.maternalGrandfather?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const abuelo = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        maternalGrandfather:
+                          value !== "none"
+                            ? {
+                              id: abuelo?.id || "",
+                              tag: abuelo?.tag,
+                              name: abuelo?.name || abuelo?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar abuelo materno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">Sin abuelo registrado</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "male" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Abuela Materna */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-maternalGrandmother">Abuela Materna</Label>
+                <Select
+                  value={editAnimal.parentInfo?.maternalGrandmother?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const abuela = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        maternalGrandmother:
+                          value !== "none"
+                            ? {
+                              id: abuela?.id || "",
+                              tag: abuela?.tag,
+                              name: abuela?.name || abuela?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar abuela materna" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">Sin abuela registrada</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "female" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Abuelo Paterno */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-paternalGrandfather">Abuelo Paterno</Label>
+                <Select
+                  value={editAnimal.parentInfo?.paternalGrandfather?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const abuelo = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        paternalGrandfather:
+                          value !== "none"
+                            ? {
+                              id: abuelo?.id || "",
+                              tag: abuelo?.tag,
+                              name: abuelo?.name || abuelo?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar abuelo paterno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">Sin abuelo registrado</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "male" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Abuela Paterna */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-paternalGrandmother">Abuela Paterna</Label>
+                <Select
+                  value={editAnimal.parentInfo?.paternalGrandmother?.id ?? "none"}
+                  onValueChange={(value) => {
+                    const abuela = animals.find((a) => a.id === value);
+                    setEditAnimal((prev) => ({
+                      ...prev,
+                      parentInfo: {
+                        ...prev.parentInfo,
+                        paternalGrandmother:
+                          value !== "none"
+                            ? {
+                              id: abuela?.id || "",
+                              tag: abuela?.tag,
+                              name: abuela?.name || abuela?.tag || "Sin nombre",
+                            }
+                            : null,
+                      },
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar abuela paterna" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">Sin abuela registrada</SelectItem>
+                      {animals
+                        .filter((a) => a.gender === "female" && a.id !== selectedAnimal?.id)
+                        .map((animal) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.tag} - {animal.name || "Sin nombre"}
+                          </SelectItem>
+                        ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {/* Compra & Notas */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-purchaseDate">Fecha de Compra (Opcional)</Label>
@@ -595,7 +1173,7 @@ export default function Animals() {
                   id="edit-purchaseDate"
                   name="purchaseDate"
                   type="date"
-                  value={editAnimal.purchaseDate as string || ""}
+                  value={(editAnimal.purchaseDate as string) || ""}
                   onChange={handleEditInputChange}
                 />
               </div>
@@ -611,6 +1189,7 @@ export default function Animals() {
                 />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-notes">Notas (Opcional)</Label>
               <Textarea
@@ -622,6 +1201,7 @@ export default function Animals() {
               />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancelar
@@ -718,58 +1298,72 @@ export default function Animals() {
               </Card>
 
               {/* Genealogy Information */}
+              {/* Genealogical Tree */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Users className="h-5 w-5" />
-                    Información Genealógica
+                    Árbol Genealógico
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Parents */}
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground mb-2 block">Padres</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="border rounded-lg p-3">
-                        <Label className="text-xs font-medium text-muted-foreground">Madre</Label>
-                        <p className="text-sm">{getParentInfo(selectedAnimal.parentFemaleId) || "No registrada"}</p>
+                <CardContent>
+                  <div className="flex flex-col items-center space-y-4">
+
+                    {/* Maternal Grandparents */}
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Abuelo Materno</p>
+                        <p className="text-sm font-medium">
+                          {getParentInfo(selectedAnimal.parentInfo?.maternalGrandfather) || "No registrado"}
+                        </p>
                       </div>
-                      <div className="border rounded-lg p-3">
-                        <Label className="text-xs font-medium text-muted-foreground">Padre</Label>
-                        <p className="text-sm">{getParentInfo(selectedAnimal.parentMaleId) || "No registrado"}</p>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Abuela Materna</p>
+                        <p className="text-sm font-medium">
+                          {getParentInfo(selectedAnimal.parentInfo?.maternalGrandmother) || "No registrada"}
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Grandparents */}
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground mb-2 block">Abuelos</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-muted-foreground">Línea Materna</Label>
-                        <div className="space-y-1">
-                          <div className="border rounded p-2">
-                            <Label className="text-xs text-muted-foreground">Abuela Materna</Label>
-                            <p className="text-xs">{getGrandparents(selectedAnimal.parentFemaleId).maternal || "No registrada"}</p>
-                          </div>
-                          <div className="border rounded p-2">
-                            <Label className="text-xs text-muted-foreground">Abuelo Materno</Label>
-                            <p className="text-xs">{getGrandparents(selectedAnimal.parentFemaleId).paternal || "No registrado"}</p>
-                          </div>
-                        </div>
+                    {/* Mother */}
+                    <div className="border-l-2 border-muted h-6"></div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Madre</p>
+                      <p className="text-sm font-medium">
+                        {getParentInfo(selectedAnimal.parentInfo?.mother) || "No registrada"}
+                      </p>
+                    </div>
+
+                    {/* Animal */}
+                    <div className="border-l-2 border-muted h-6"></div>
+                    <div className="text-center bg-muted p-2 rounded-lg">
+                      <p className="text-sm font-bold">{selectedAnimal.tag}</p>
+                      <p className="text-xs text-muted-foreground">{selectedAnimal.name || "Sin nombre"}</p>
+                    </div>
+
+                    {/* Father */}
+                    <div className="border-l-2 border-muted h-6"></div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground">Padre</p>
+                      <p className="text-sm font-medium">
+                        {getParentInfo(selectedAnimal.parentInfo?.father) || "No registrado"}
+                      </p>
+                    </div>
+
+                    {/* Paternal Grandparents */}
+                    <div className="border-l-2 border-muted h-6"></div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Abuelo Paterno</p>
+                        <p className="text-sm font-medium">
+                          {getParentInfo(selectedAnimal.parentInfo?.paternalGrandfather) || "No registrado"}
+                        </p>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-muted-foreground">Línea Paterna</Label>
-                        <div className="space-y-1">
-                          <div className="border rounded p-2">
-                            <Label className="text-xs text-muted-foreground">Abuela Paterna</Label>
-                            <p className="text-xs">{getGrandparents(selectedAnimal.parentMaleId).maternal || "No registrada"}</p>
-                          </div>
-                          <div className="border rounded p-2">
-                            <Label className="text-xs text-muted-foreground">Abuelo Paterno</Label>
-                            <p className="text-xs">{getGrandparents(selectedAnimal.parentMaleId).paternal || "No registrado"}</p>
-                          </div>
-                        </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Abuela Paterna</p>
+                        <p className="text-sm font-medium">
+                          {getParentInfo(selectedAnimal.parentInfo?.paternalGrandmother) || "No registrada"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -862,7 +1456,7 @@ export default function Animals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Lista de Animales</CardTitle>
@@ -895,16 +1489,16 @@ export default function Animals() {
                       <Label>Tipo</Label>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="dairy" 
+                          <Checkbox
+                            id="dairy"
                             checked={selectedType === AnimalType.DAIRY_CATTLE}
                             onCheckedChange={() => setSelectedType(selectedType === AnimalType.DAIRY_CATTLE ? null : AnimalType.DAIRY_CATTLE)}
                           />
                           <Label htmlFor="dairy">Ganado Lechero</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="beef" 
+                          <Checkbox
+                            id="beef"
                             checked={selectedType === AnimalType.BEEF_CATTLE}
                             onCheckedChange={() => setSelectedType(selectedType === AnimalType.BEEF_CATTLE ? null : AnimalType.BEEF_CATTLE)}
                           />
@@ -928,9 +1522,9 @@ export default function Animals() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
+                    <Button
+                      variant="outline"
+                      className="w-full"
                       onClick={() => {
                         setSelectedType(null);
                         setSelectedStatus(null);
@@ -994,7 +1588,7 @@ export default function Animals() {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => deleteAnimal(animal.id)}
                               >
